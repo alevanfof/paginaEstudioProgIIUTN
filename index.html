@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#667eea">
+  <title>Programación II — Unidades 5 a 8</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --violet: #667eea; --purple: #764ba2; --ink: #292a3d; --muted: #65677b; }
+    body {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 30px; overflow-x: hidden; overflow-y: auto; padding: 20px 16px 48px; color: var(--ink);
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+    button, input { font: inherit; }
+    button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #31ad9d; outline-offset: 3px; }
+    .presentation {
+      position: relative; width: min(1240px, 96vw); height: min(880px, 94vh); min-height: 540px;
+      overflow: hidden; border-radius: 22px; background: #fff;
+      box-shadow: 0 24px 76px rgba(24, 16, 61, .34);
+    }
+    .progress-track { position: absolute; z-index: 20; inset: 0 0 auto; height: 6px; background: #e9e8f5; }
+    .progress-fill { width: 0; height: 100%; background: linear-gradient(90deg, var(--violet), var(--purple)); transition: width .12s linear; }
+    .progress-seek { position: absolute; inset: -8px 0; width: 100%; height: 22px; cursor: pointer; opacity: 0; }
+    .deck-header {
+      position: absolute; z-index: 5; top: 20px; left: 28px; right: 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    }
+    .course-mark { display: flex; align-items: center; gap: 10px; color: #74758a; font-size: .78rem; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+    .course-mark::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--violet), var(--purple)); box-shadow: 0 0 0 5px #f0efff; }
+    .deck-tabs { display: flex; gap: 4px; padding: 4px; border: 1px solid #ececf3; border-radius: 999px; background: #f8f8fc; }
+    .deck-tab { padding: 8px 15px; border: 0; border-radius: 999px; color: #74758a; background: transparent; cursor: pointer; font-size: .79rem; font-weight: 700; }
+    .deck-tab.active { color: #fff; background: linear-gradient(120deg, var(--violet), var(--purple)); box-shadow: 0 3px 10px rgba(102, 126, 234, .24); }
+    .deck-evaluation-link {
+      flex: 0 0 auto; padding: 9px 14px; border: 1px solid #dcd8f3; border-radius: 999px;
+      color: #55459a; background: #f3f1ff; font-size: .78rem; font-weight: 800; text-decoration: none;
+      transition: color .2s, background .2s, transform .2s;
+    }
+    .deck-evaluation-link:hover { color: #fff; background: linear-gradient(120deg, var(--violet), var(--purple)); transform: translateY(-1px); }
+    .slide-number {
+      position: absolute; z-index: 2; top: 76px; right: 28px; padding: 7px 13px;
+      border-radius: 999px; color: var(--violet); background: #f1f1ff;
+      font-size: .78rem; font-weight: 750; font-variant-numeric: tabular-nums;
+    }
+    .slides { position: absolute; inset: 0; }
+    .slide {
+      position: absolute; inset: 0; display: none; flex-direction: column;
+      padding: 112px clamp(22px, 5vw, 64px) 78px; opacity: 0; transform: translateY(8px);
+    }
+    .slide.active { display: flex; animation: slide-in .32s ease forwards; }
+    @keyframes slide-in { to { opacity: 1; transform: translateY(0); } }
+    .eyebrow { flex: 0 0 auto; margin-bottom: 8px; color: #509b90; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1, h2 { max-width: 940px; color: var(--violet); font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.1; letter-spacing: -.04em; }
+    h2 { color: var(--purple); font-size: clamp(1.6rem, 3.35vw, 2.35rem); }
+    .lead { max-width: 950px; margin: 10px 0 18px; color: #53556a; font-size: clamp(.94rem, 1.35vw, 1.05rem); line-height: 1.55; }
+    .slide-main { min-height: 0; flex: 1; }
+    .text-slide { display: flex; flex-direction: column; justify-content: center; }
+    .info-box {
+      max-width: 900px; padding: 17px 20px; border-left: 4px solid var(--violet); border-radius: 0 13px 13px 0;
+      background: linear-gradient(120deg, #f4f5ff, #f8f3ff); color: #4c4e63; font-size: .97rem; line-height: 1.6;
+      transition: box-shadow .25s, background .25s;
+    }
+    .info-box.mentioned { animation: mention-glow 1.45s ease-in-out infinite; background: #f0edff; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+    .card { min-height: 70px; padding: 12px 15px; border: 1px solid #ececf5; border-radius: 12px; background: #f9f9fd; transition: background .2s, box-shadow .2s; }
+    .card strong { display: block; margin-bottom: 4px; color: var(--violet); font-size: .88rem; }
+    .card span { color: #5e6073; font-size: .82rem; line-height: 1.4; }
+    .card.mentioned { animation: mention-glow 1.4s ease-in-out infinite; background: #edf0ff; }
+    @keyframes mention-glow { 50% { box-shadow: 0 0 22px rgba(102, 126, 234, .34); } }
+    .lesson-layout { display: grid; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1.35fr) minmax(245px, .8fr); gap: 15px; }
+    .code-panel {
+      display: flex; min-height: 0; flex-direction: column; overflow: hidden;
+      border: 1px solid #272a3d; border-radius: 13px; color: #eef0fc; background: #191c2b;
+      box-shadow: 0 8px 22px rgba(32, 34, 62, .13);
+    }
+    .file-tab { flex: 0 0 auto; padding: 9px 13px; border-bottom: 1px solid #313449; color: #b9bfd8; background: #222537; font-size: .75rem; }
+    pre { min-height: 0; overflow: auto; padding: 10px 0; tab-size: 4; }
+    .code-line {
+      display: block; min-height: 20px; padding: 1px 12px; border-left: 3px solid transparent;
+      color: #e1e4f1; font: 12px/1.55 Consolas, "Cascadia Code", "Courier New", monospace;
+      white-space: pre; transition: background .2s, border-color .2s;
+    }
+    .line-number { display: inline-block; width: 28px; padding-right: 9px; color: #7e849f; text-align: right; user-select: none; }
+    .code-line.mentioned {
+      border-left-color: #b9a6ff; color: #fff; background: #39334f;
+      box-shadow: inset 0 0 0 1px rgba(185, 166, 255, .12);
+    }
+    .explanation { display: flex; min-height: 0; flex-direction: column; gap: 10px; overflow: auto; }
+    .explanation .card { background: #fafaff; }
+    .explanation .info-box { padding: 13px 15px; font-size: .88rem; }
+    .question-box { padding: 14px 16px; border: 1px solid #eee9fb; border-radius: 12px; color: #4d466e; background: #f8f5ff; font-size: .88rem; line-height: 1.5; }
+    .question-box strong { display: block; margin-bottom: 5px; color: var(--purple); }
+    .question-box.mentioned { animation: mention-glow 1.45s ease-in-out infinite; border-color: #b9a9f4; }
+    .question-box.answer-active [data-answer] { color: #33215e; font-weight: 650; }
+    .uml-panel { margin: 0; padding: 12px 14px 9px; border: 1px solid #e8e7f2; border-radius: 12px; background: #fbfbfe; }
+    .uml-panel svg { display: block; width: 100%; max-height: 130px; }
+    .uml-panel text { fill: #303247; font: 600 15px "Segoe UI", Tahoma, sans-serif; }
+    .uml-panel .uml-small { fill: #696b7d; font-size: 12px; font-weight: 500; }
+    .uml-panel .uml-line { fill: none; stroke: #55576c; stroke-width: 2.5; }
+    .uml-panel .uml-box { fill: #fff; stroke: #73758a; stroke-width: 2; }
+    .uml-caption { margin-top: 3px; color: #686a7b; font-size: .74rem; text-align: center; }
+    .quiz-section {
+      width: min(1240px, 96vw); padding: clamp(20px, 4vw, 42px); border: 1px solid #e9e8f3;
+      border-radius: 22px; background: #fff; box-shadow: 0 24px 76px rgba(24, 16, 61, .22);
+    }
+    .quiz-entry {
+      display: flex; width: min(1240px, 96vw); align-items: center; justify-content: space-between; gap: 16px;
+      padding: 17px 22px; border: 1px solid rgba(255,255,255,.48); border-radius: 15px;
+      color: #fff; background: rgba(34, 24, 77, .28); text-decoration: none;
+      box-shadow: 0 10px 28px rgba(24, 16, 61, .16); transition: background .2s, transform .2s;
+    }
+    .quiz-entry:hover { background: rgba(34, 24, 77, .42); transform: translateY(-2px); }
+    .quiz-entry strong { display: block; font-size: 1rem; }
+    .quiz-entry span { display: block; margin-top: 4px; color: rgba(255,255,255,.85); font-size: .84rem; line-height: 1.45; }
+    .quiz-entry-arrow { flex: 0 0 auto; font-size: 1.5rem; }
+    .quiz-heading { max-width: 900px; margin-bottom: 22px; }
+    .quiz-heading .eyebrow { margin-bottom: 8px; }
+    .quiz-heading h2 { color: var(--ink); }
+    .quiz-heading p { margin-top: 9px; color: var(--muted); line-height: 1.55; }
+    .quiz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .quiz-card { overflow: hidden; border: 1px solid #e8e8f1; border-radius: 17px; background: #fcfcff; }
+    .quiz-card-header { padding: 19px 20px; color: #fff; background: linear-gradient(125deg, var(--violet), var(--purple)); }
+    .quiz-card[data-quiz="conceptos"] .quiz-card-header { background: linear-gradient(125deg, #179b57, #4173d5); }
+    .quiz-card-header h3 { font-size: 1.17rem; }
+    .quiz-card-header p { margin-top: 5px; color: rgba(255,255,255,.86); font-size: .84rem; line-height: 1.45; }
+    .quiz-form { display: grid; gap: 13px; padding: 16px; }
+    .quiz-question { padding: 15px; border: 1px solid #ececf4; border-radius: 13px; background: #fff; transition: border-color .2s, background .2s, box-shadow .2s; }
+    .quiz-question legend { width: 100%; margin-bottom: 10px; color: #303247; font-size: .91rem; font-weight: 750; line-height: 1.5; }
+    .quiz-question pre { margin: 8px 0 11px; padding: 11px 12px; overflow-x: auto; border-radius: 9px; color: #ebedf7; background: #191c2b; font: 12px/1.55 Consolas, monospace; white-space: pre-wrap; }
+    .quiz-option { display: flex; align-items: flex-start; gap: 9px; margin: 6px 0; padding: 9px 10px; border: 1px solid #eeeef5; border-radius: 9px; color: #56586b; background: #fafaff; cursor: pointer; font-size: .84rem; line-height: 1.4; transition: background .15s, border-color .15s; }
+    .quiz-option:hover { border-color: #c8c2ed; background: #f4f2ff; }
+    .quiz-option input { margin-top: 2px; accent-color: var(--violet); }
+    .quiz-question.correct { border-color: #46b889; background: #f1fbf6; box-shadow: inset 4px 0 #31a975; }
+    .quiz-question.incorrect { border-color: #e58c92; background: #fff5f5; box-shadow: inset 4px 0 #dc5b66; }
+    .quiz-feedback { display: none; margin-top: 9px; padding: 9px 11px; border-radius: 9px; font-size: .82rem; line-height: 1.45; }
+    .quiz-question.correct .quiz-feedback, .quiz-question.incorrect .quiz-feedback { display: block; }
+    .quiz-question.correct .quiz-feedback { color: #23684d; background: #ddf7e9; }
+    .quiz-question.incorrect .quiz-feedback { color: #8c343b; background: #ffe4e5; }
+    .quiz-question.needs-answer .quiz-feedback { display: block; color: #765b18; background: #fff6d8; }
+    .quiz-question.correct .quiz-feedback::before { content: "✓ "; font-weight: 900; }
+    .quiz-question.incorrect .quiz-feedback::before { content: "× "; font-weight: 900; }
+    .quiz-question-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .quiz-check-answer { padding: 8px 12px; border: 1px solid #d9d5ef; border-radius: 9px; color: #55459a; background: #f5f3ff; cursor: pointer; font-size: .8rem; font-weight: 750; }
+    .quiz-check-answer:hover { border-color: #aaa0dd; background: #ebe8ff; }
+    .quiz-divider { padding: 14px 15px; border: 1px solid #dcd8f3; border-radius: 12px; color: #494366; background: #f3f1ff; }
+    .quiz-divider h4 { color: #55459a; font-size: .94rem; }
+    .quiz-divider p { margin-top: 4px; color: #66627d; font-size: .82rem; line-height: 1.45; }
+    .quiz-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 0 16px 16px; }
+    .quiz-submit, .quiz-reset { padding: 11px 16px; border: 0; border-radius: 10px; color: #fff; background: linear-gradient(120deg, var(--violet), var(--purple)); cursor: pointer; font-weight: 750; }
+    .quiz-reset { border: 1px solid #e5e4ef; color: #55566b; background: #fff; }
+    .quiz-result { flex-basis: 100%; min-height: 46px; padding: 12px 14px; border: 1px solid transparent; border-radius: 11px; color: #5d5f70; background: #f3f3f8; font-weight: 750; line-height: 1.5; }
+    .quiz-result.scored { color: #235f49; border-color: #b6e6ce; background: #e7f8ef; }
+    .quiz-result.scored.needs-review { color: #805812; border-color: #f0dda5; background: #fff7da; }
+    .quiz-progress { padding: 0 16px 14px; color: #76788a; font-size: .78rem; }
+    details.solution { border: 1px solid #d9efe9; border-radius: 11px; background: #f3fbf8; color: #37564e; font-size: .85rem; line-height: 1.5; }
+    details.solution summary { padding: 10px 13px; color: #287b68; cursor: pointer; font-weight: 750; }
+    .solution-body { padding: 0 13px 12px; }
+    .solution-body pre { margin-top: 8px; border-radius: 8px; background: #202638; }
+    .output { padding: 10px 12px; border-radius: 9px; color: #d5f4e7; background: #202638; font: 11px/1.5 Consolas, monospace; white-space: pre-wrap; }
+    .plain-list { display: grid; max-width: 900px; gap: 9px; list-style: none; }
+    .plain-list li { padding: 11px 14px; border-radius: 10px; color: #4d4f63; background: #f7f7fc; font-size: .9rem; line-height: 1.45; }
+    .plain-list li::before { margin-right: 8px; color: var(--violet); content: "→"; font-weight: 800; }
+    .controls { position: absolute; z-index: 10; bottom: 15px; left: 17px; display: flex; gap: 6px; opacity: .1; transition: opacity .2s; }
+    .controls:hover, .controls:focus-within { opacity: .86; }
+    .control-button {
+      display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid rgba(102, 126, 234, .24);
+      border-radius: 50%; color: #5967b6; background: rgba(255, 255, 255, .96); cursor: pointer; font-size: .78rem;
+    }
+    .start-button {
+      position: absolute; z-index: 11; right: 19px; bottom: 14px; padding: 9px 18px; border: 0;
+      border-radius: 999px; color: white; background: linear-gradient(135deg, var(--violet), var(--purple));
+      box-shadow: 0 5px 16px rgba(102, 126, 234, .28); cursor: pointer; font-size: .84rem; font-weight: 750;
+    }
+    .start-button.hidden { display: none; }
+    @media (max-width: 760px) {
+      body { gap: 18px; padding: 9px 9px 30px; }
+      .presentation { width: 100%; height: 97vh; min-height: 500px; border-radius: 15px; }
+      .deck-header { top: 15px; left: 14px; right: 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 5px 8px; }
+      .course-mark { max-width: 120px; font-size: .64rem; line-height: 1.4; }
+      .deck-tabs { gap: 1px; }
+      .deck-tab { padding: 7px 9px; font-size: .68rem; }
+      .deck-evaluation-link { padding: 8px 10px; font-size: .66rem; white-space: nowrap; }
+      .course-mark { grid-column: 1; grid-row: 1; }
+      .deck-tabs { grid-column: 1; grid-row: 2; justify-self: start; }
+      .deck-evaluation-link { grid-column: 2; grid-row: 1 / 3; }
+      .slide-number { top: 68px; right: 14px; padding: 6px 10px; font-size: .7rem; }
+      .slide { padding: 99px 17px 66px; overflow-y: auto; }
+      .lesson-layout { grid-template-columns: 1fr; grid-template-rows: minmax(180px, 1.1fr) minmax(115px, .8fr); gap: 9px; }
+      .code-line { font-size: 11px; }
+      .explanation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+      .cards { gap: 8px; }
+      .card { min-height: unset; padding: 10px 12px; }
+      .lead { margin: 8px 0 12px; }
+      .quiz-section { width: 100%; border-radius: 15px; }
+      .quiz-entry { width: 100%; padding: 14px 16px; }
+      .quiz-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 460px) {
+      .lesson-layout { display: flex; flex-direction: column; }
+      .code-panel { min-height: 210px; flex: 1; }
+      .explanation { display: flex; max-height: 33%; }
+      .cards { grid-template-columns: 1fr 1fr; }
+      .card span { font-size: .77rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="presentation" aria-label="Presentación de Programación II">
+    <div class="progress-track" aria-hidden="true">
+      <div class="progress-fill" id="progress-fill"></div>
+      <input class="progress-seek" id="progress-seek" type="range" min="0" max="1000" value="0" aria-label="Progreso de la presentación">
+    </div>
+    <header class="deck-header">
+      <div class="course-mark">Programación II · Unidades 5 a 8</div>
+      <nav class="deck-tabs" aria-label="Sección de la presentación">
+        <button class="deck-tab active" type="button" data-deck="practica" aria-pressed="true">Práctica de código</button>
+        <button class="deck-tab" type="button" data-deck="conceptos" aria-pressed="false">Conceptos</button>
+      </nav>
+      <a class="deck-evaluation-link" href="#cuestionarios">Ejercicios y puntaje ↓</a>
+    </header>
+    <div class="slide-number" id="slide-number" aria-live="polite">1 / 1</div>
+    <section class="slides" id="slides" aria-live="polite"></section>
+    <div class="controls" aria-label="Controles">
+      <button class="control-button" id="play-button" type="button" aria-label="Continuar">▶</button>
+      <button class="control-button" id="stop-button" type="button" aria-label="Volver al inicio">■</button>
+      <button class="control-button" id="back-button" type="button" aria-label="Retroceder">↶</button>
+    </div>
+    <button class="start-button" id="start-button" type="button">Comenzar</button>
+    <audio id="presentation-track" preload="metadata"></audio>
+  </main>
+  <a class="quiz-entry" href="#cuestionarios">
+    <span>
+      <strong>Evaluaciones finales · obtener puntaje</strong>
+      <span>20 ejercicios de código y 36 preguntas conceptuales, incluidas las 28 del PDF. Cada evaluación calcula su propio puntaje.</span>
+    </span>
+    <span class="quiz-entry-arrow" aria-hidden="true">↓</span>
+  </a>
+  <section class="quiz-section" id="cuestionarios" aria-labelledby="quiz-title">
+    <header class="quiz-heading">
+      <p class="eyebrow">PRÁCTICA INTEGRADORA · UNIDADES 5 A 8</p>
+      <h2 id="quiz-title">Aplicación y comprensión</h2>
+      <p>Corregí cada respuesta en el momento con el botón de su pregunta. Al terminar, presioná la evaluación general para obtener el puntaje total. Hay 56 preguntas: las 28 del cuestionario del PDF, 8 adicionales sobre los audios y 20 ejercicios de código.</p>
+    </header>
+    <div class="quiz-grid">
+      <article class="quiz-card" data-quiz="practica">
+        <header class="quiz-card-header">
+          <h3>Aplicación sobre código</h3>
+          <p>Corregí cada respuesta mientras avanzás. Al final, evaluá el cuestionario completo para ver el puntaje.</p>
+        </header>
+        <form class="quiz-form" id="quiz-form-practica"></form>
+        <div class="quiz-progress" id="quiz-progress-practica"></div>
+        <div class="quiz-actions">
+          <button class="quiz-submit" type="submit" form="quiz-form-practica">Evaluar todo y calcular puntaje</button>
+          <button class="quiz-reset" type="button" data-reset="practica">Reiniciar</button>
+          <div class="quiz-result" id="quiz-result-practica" aria-live="polite">Respondé todos los ejercicios para obtener el resultado final.</div>
+        </div>
+      </article>
+      <article class="quiz-card" data-quiz="conceptos">
+        <header class="quiz-card-header">
+          <h3>Conceptos y preguntas de examen</h3>
+          <p>Corregí cada respuesta mientras avanzás. Incluye las 28 preguntas del PDF y 8 adicionales sobre los audios.</p>
+        </header>
+        <form class="quiz-form" id="quiz-form-conceptos"></form>
+        <div class="quiz-progress" id="quiz-progress-conceptos"></div>
+        <div class="quiz-actions">
+          <button class="quiz-submit" type="submit" form="quiz-form-conceptos">Evaluar todo y calcular puntaje</button>
+          <button class="quiz-reset" type="button" data-reset="conceptos">Reiniciar</button>
+          <div class="quiz-result" id="quiz-result-conceptos" aria-live="polite">Respondé todos los ejercicios para obtener el resultado final.</div>
+        </div>
+      </article>
+    </div>
+  </section>
+  <script>
+    const decks = {
+      practica: {
+        audio: "./audios_estudio_programacion/01_practica_codigo_programacion.mp3",
+        slides: [
+          { at: 0, chapter: "Lectura y depuración de código", kicker: "UNIDADES 5 A 8 · EJEMPLO JAVA", title: "Un sistema de biblioteca, paso a paso", lead: "Vamos a leer, ejecutar y corregir un proyecto Java que aplica UML, colecciones, herencia, polimorfismo, interfaces y excepciones.", text: "Seguí el estado, buscá los casos límite y anticipá la salida." },
+          { at: 0, chapter: "Del diagrama a Java", kicker: "MODELO UML", title: "¿Quién guarda cada referencia?", lead: "El diseño se refleja directamente en los campos, constructores y colecciones.", codeTitle: "Socio.java · Prestamo.java", code: ["private final List<Prestamo> prestamos", "        = new ArrayList<>();", "", "private final MaterialPrestable material;", "private final PeriodoPrestamo periodo;", "", "this.material = Objects.requireNonNull(material,", "        \"El material es obligatorio\");", "this.periodo = new PeriodoPrestamo(dias);"], cards: [["Socio → Préstamo", "Una lista representa la relación uno a muchos."], ["Préstamo → Período", "El préstamo crea su período dentro del constructor."], ["Biblioteca → Material", "El material entra desde afuera y queda registrado."], ["Material → Prestable", "La herencia y la interfaz definen tipos y capacidades."]], text: "Antes de leer una línea, preguntá quién crea el objeto, quién conserva su referencia y si hay uno o muchos." },
+          { at: 0, chapter: "Préstamos · composición", kicker: "CREAR EL PERÍODO ADENTRO", title: "Prestamo administra su período", lead: "El constructor crea el objeto que representa el intervalo de fechas y valida la cantidad de días.", codeTitle: "Prestamo.java · PeriodoPrestamo.java", code: ["public Prestamo(MaterialPrestable material, int dias) {", "    this.material = Objects.requireNonNull(material,", "            \"El material es obligatorio\");", "    this.periodo = new PeriodoPrestamo(dias);", "}", "", "public PeriodoPrestamo(int dias) {", "    if (dias < 1) {", "        throw new IllegalArgumentException(", "                \"El préstamo debe durar al menos un día.\");", "    }", "    inicio = LocalDate.now();", "    vencimiento = inicio.plusDays(dias);", "}"], cards: [["Referencia", "El material prestable llega desde afuera."], ["Composición", "Prestamo crea su PeriodoPrestamo."], ["Validación", "Un número de días inválido se rechaza antes de prestar."]], cues: [] },
+          { at: 0, chapter: "UML · clases", kicker: "ABSTRACCIÓN Y ENCAPSULAMIENTO", title: "La clase base del catálogo", lead: "MaterialBiblioteca concentra la identidad que comparten los materiales y deja la ficha para las subclases.", codeTitle: "MaterialBiblioteca.java", code: ["public abstract class MaterialBiblioteca {", "    private final String codigo;", "    private final String titulo;", "", "    protected MaterialBiblioteca(String codigo, String titulo) {", "        this.codigo = Objects.requireNonNull(codigo,", "                \"El código es obligatorio\").trim();", "        this.titulo = Objects.requireNonNull(titulo,", "                \"El título es obligatorio\").trim();", "        if (this.codigo.isEmpty() || this.titulo.isEmpty()) {", "            throw new IllegalArgumentException(", "                    \"El código y el título no pueden estar vacíos.\");", "        }", "    }", "", "    public abstract String mostrarFicha();", "}"], cards: [["abstract", "No se puede crear un material genérico con new."], ["private final", "Estado protegido; queda fijado en el constructor."], ["protected constructor", "Disponible para las subclases."], ["abstract method", "La clase concreta decide cómo muestra su ficha."]], cues: [] },
+          { at: 0, chapter: "Herencia · contratos", kicker: "IMPLEMENTAR PRESTABLE", title: "Estado compartido y un fallo explícito", lead: "MaterialPrestable hereda la identidad, cumple el contrato Prestable y concentra la transición disponible–prestado.", codeTitle: "MaterialPrestable.java · prestar()", code: ["private boolean prestado;", "", "@Override", "public final void prestar()", "        throws LibroNoDisponibleException {", "    if (prestado) {", "        throw new LibroNoDisponibleException(getTitulo());", "    }", "    prestado = true;", "}", "", "@Override", "public final void devolver() {", "    prestado = false;", "}", "", "@Override", "public final boolean estaPrestado() {", "    return prestado;", "}"], cards: [["Precondición", "Si ya está prestado, no cambia el estado."], ["throw", "Lanza una excepción específica del dominio."], ["Estado", "Solo el camino válido lo marca como prestado."], ["Contrato", "La interfaz declara qué operaciones se ofrecen."]], cues: [] },
+          { at: 0, chapter: "Herencia y polimorfismo", kicker: "DOS TIPOS CONCRETOS", title: "Libro y Revista comparten, pero varían", lead: "Ambas subclases heredan el estado de préstamo y sobrescriben el formato de la ficha.", codeTitle: "Libro.java + Revista.java", code: ["public final class Libro extends MaterialPrestable {", "    private final String autor;", "", "    public Libro(String codigo, String titulo, String autor) {", "        super(codigo, titulo);", "        this.autor = Objects.requireNonNull(autor,", "                \"El autor es obligatorio\").trim();", "        if (this.autor.isEmpty()) {", "            throw new IllegalArgumentException(", "                    \"El autor no puede estar vacío.\");", "        }", "    }", "", "    @Override", "    public String mostrarFicha() {", "        return getCodigo() + \" | \" + getTitulo()", "                + \" | \" + autor + \" | \" + estadoPrestamo();", "    }", "}"], cards: [["extends", "La subclase hereda los miembros accesibles."], ["@Override", "El compilador verifica la sobrescritura."], ["Estado común", "La implementación del préstamo no se duplica."], ["Variación", "Libro y Revista presentan su ficha con datos distintos."]], cues: [] },
+          { at: 0, chapter: "Polimorfismo · despacho", kicker: "UNA REFERENCIA, VARIOS OBJETOS", title: "La ficha depende del tipo real", lead: "El catálogo expone un tipo común, mientras cada material aporta su implementación.", codeTitle: "EjemploBiblioteca.java", code: ["for (MaterialBiblioteca material : biblioteca.getMateriales()) {", "    System.out.println(material.mostrarFicha());", "}"], cards: [["Tipo de referencia", "MaterialBiblioteca."], ["Tipo real", "Libro o Revista."], ["Despacho dinámico", "Cada objeto ejecuta su versión de mostrarFicha."]], cues: [] },
+          { at: 0, chapter: "Colecciones · inicialización", kicker: "SOCIO TIENE MUCHOS PRÉSTAMOS", title: "La lista debe existir antes de usar add", lead: "Socio transforma la multiplicidad uno a muchos en una colección inicializada.", codeTitle: "Socio.java", code: ["private final List<Prestamo> prestamos = new ArrayList<>();", "", "void registrar(Prestamo prestamo) {", "    prestamos.add(Objects.requireNonNull(prestamo,", "            \"El préstamo es obligatorio\"));", "}", "", "public List<Prestamo> getPrestamos() {", "    return Collections.unmodifiableList(prestamos);", "}"], cards: [["Inicializar", "new ArrayList crea la lista vacía."], ["agregar", "add incorpora el préstamo a la lista."], ["Consultar", "El código cliente puede iterar los elementos."], ["Encapsular", "La vista no modificable protege la lista interna."]], cues: [] },
+          { at: 0, chapter: "Colecciones · enum", kicker: "ESTADO TIPADO", title: "Rechazar socios no habilitados", lead: "EstadoSocio evita representar el estado con cadenas arbitrarias.", codeTitle: "EstadoSocio.java · Biblioteca.java", code: ["public enum EstadoSocio {", "    ACTIVO,", "    SUSPENDIDO,", "    MOROSO", "}", "", "if (socio.getEstado() != EstadoSocio.ACTIVO) {", "    throw new IllegalStateException(", "            \"El socio no está habilitado para pedir préstamos.\");", "}"], cards: [["enum", "Conjunto cerrado de opciones válidas."], ["Comparación", "Se compara una constante del enum."], ["Regla del dominio", "Solo un socio activo puede pedir prestado."]], cues: [] },
+          { at: 0, chapter: "Lectura de errores · búsqueda", kicker: "COMPARAR CONTENIDO", title: "Buscar un código de forma segura", lead: "La comparación ignora mayúsculas y el resultado null se comprueba antes de usarse.", codeTitle: "Biblioteca.java · buscarPorCodigo()", code: ["public MaterialBiblioteca buscarPorCodigo(String codigo) {", "    Objects.requireNonNull(codigo, \"El código es obligatorio\");", "    for (MaterialBiblioteca material : materiales) {", "        if (material.getCodigo().equalsIgnoreCase(codigo.trim())) {", "            return material;", "        }", "    }", "    return null;", "}"], cards: [["equalsIgnoreCase", "Compara el contenido sin distinguir mayúsculas."], ["for-each", "Busca cada material del catálogo."], ["return null", "No se encontró un código coincidente."], ["Comprobación", "EjemploBiblioteca revisa que la búsqueda no sea null antes de llamar mostrarFicha."]], cues: [] },
+          { at: 0, chapter: "Préstamos · flujo", kicker: "LEER EN ORDEN", title: "Validar, crear, prestar y registrar", lead: "El orden de las instrucciones evita cambiar el estado si la construcción del préstamo falla.", codeTitle: "Biblioteca.java · prestar()", code: ["if (socio.getEstado() != EstadoSocio.ACTIVO) {", "    throw new IllegalStateException(", "            \"El socio no está habilitado para pedir préstamos.\");", "}", "", "Prestamo prestamo = new Prestamo(material, dias);", "material.prestar();", "socio.registrar(prestamo);", "return prestamo;"], cards: [["1", "Validar que el socio esté habilitado."], ["2", "Crear y validar el préstamo."], ["3", "Cambiar el estado del material."], ["4", "Agregarlo a la lista del socio."]], cues: [] },
+          { at: 0, chapter: "Excepciones · checked", kicker: "DECLARAR Y CAPTURAR", title: "Una segunda solicitud no pasa", lead: "La interfaz expone una excepción checked; el método la propaga y el programa decide cómo responder.", codeTitle: "Prestable.java · EjemploBiblioteca.java", code: ["public interface Prestable {", "    void prestar() throws LibroNoDisponibleException;", "    void devolver();", "    boolean estaPrestado();", "}", "", "try {", "    biblioteca.prestar(socio, libro, 14);", "    biblioteca.prestar(socio, libro, 14);", "} catch (LibroNoDisponibleException ex) {", "    System.out.println(\"Préstamo rechazado: \" + ex.getMessage());", "}"], cards: [["throws", "Declara que el método puede propagar el error."], ["throw", "Lanza la excepción en el punto donde se detecta."], ["catch", "Traduce el error a una respuesta para el usuario."]], cues: [] },
+          { at: 0, chapter: "Ejercicio · null", kicker: "ENCONTRÁ EL ERROR", title: "¿Por qué falla esta llamada?", lead: "El compilador acepta el método. ¿Qué valor tiene cursos cuando se ejecuta add?", codeTitle: "EjemplosErrores.java · versión incorrecta", code: ["List<String> cursos = null;", "cursos.add(\"Programación II\");"], exercise: "Antes de abrir la resolución, identificá el valor de la referencia y el momento en que aparece el error.", solution: "cursos es null; no existe un objeto que reciba la llamada add. En ejecución se lanza NullPointerException. La solución es crear la lista antes de usarla.", solutionCode: ["List<String> cursos = new ArrayList<>();", "cursos.add(\"Programación II\");"], cues: [] },
+          { at: 0, chapter: "Ejercicio · igualdad", kicker: "PREDICCIÓN", title: "¿Qué imprime cada comparación?", lead: "Se crean dos Strings distintos con el mismo contenido. Predecí ambos boolean antes de ver el resultado.", codeTitle: "EjemplosErrores.java", code: ["public static boolean compararCadenasIncorrectamente() {", "    String ingresado = new String(\"UML\");", "    String buscado = new String(\"UML\");", "    return ingresado == buscado;", "}", "", "public static boolean compararCadenasPorContenido() {", "    String ingresado = new String(\"UML\");", "    String buscado = new String(\"UML\");", "    return ingresado.equals(buscado);", "}"], output: "Comparación por referencia: false\nComparación por contenido: true", exercise: "Indicá qué compara == y qué compara equals. Después explicá por qué los valores impresos no coinciden.", solution: "Primero imprime false: ingresado y buscado son objetos distintos. Después imprime true: equals compara las letras almacenadas.", cues: [] },
+          { at: 0, chapter: "Ejercicio · modificar una lista", kicker: "ERROR DE ITERACIÓN", title: "No elimines desde el for-each", lead: "El iterador interno detecta que el tamaño de la lista cambió por fuera.", codeTitle: "EjemplosErrores.java · versión incorrecta", code: ["public static void eliminarEnForEachIncorrectamente() {", "    List<String> codigos = new ArrayList<>(", "            Arrays.asList(\"UML\", \"POO\", \"Base de datos\"));", "    for (String codigo : codigos) {", "        if (codigo.equals(\"UML\")) {", "            codigos.remove(codigo);", "        }", "    }", "}"], exercise: "Seguí la primera vuelta: el for-each obtiene UML y la lista cambia. ¿Qué comprueba el iterador cuando intenta continuar?", solution: "Puede lanzar ConcurrentModificationException. Si se necesita borrar durante el recorrido, usá el remove del mismo Iterator.", solutionCode: ["Iterator<String> iterator = codigos.iterator();", "while (iterator.hasNext()) {", "    if (iterator.next().equals(\"UML\")) {", "        iterator.remove();", "    }", "}"], cues: [] },
+          { at: 0, chapter: "Ejercicio integrador", kicker: "PREDICCIÓN DE EJECUCIÓN", title: "Seguí el estado del libro", lead: "El programa registra dos materiales, presta un libro, intenta repetir el préstamo y finalmente lo devuelve.", codeTitle: "EjemploBiblioteca.java", code: ["Biblioteca biblioteca = new Biblioteca();", "Libro libro = new Libro(\"L-101\",", "        \"El Principito\", \"Antoine de Saint-Exupéry\");", "Revista revista = new Revista(\"R-204\", \"Ciencia Hoy\", 204);", "Socio socio = new Socio(\"Alejandro\", EstadoSocio.ACTIVO);", "", "biblioteca.registrar(libro);", "biblioteca.registrar(revista);", "MaterialBiblioteca encontrado = biblioteca.buscarPorCodigo(\"l-101\");", "if (encontrado != null) {", "    System.out.println(\"Búsqueda: \" + encontrado.mostrarFicha());", "}", "", "for (MaterialBiblioteca material : biblioteca.getMateriales()) {", "    System.out.println(material.mostrarFicha());", "}", "", "try {", "    biblioteca.prestar(socio, libro, 14);", "    biblioteca.prestar(socio, libro, 14);", "} catch (LibroNoDisponibleException ex) {", "    System.out.println(\"Préstamo rechazado: \" + ex.getMessage());", "}", "", "libro.devolver();"], output: "Búsqueda: L-101 | El Principito | Antoine de Saint-Exupéry | Disponible\nL-101 | El Principito | Antoine de Saint-Exupéry | Disponible\nR-204 | Ciencia Hoy | N.º 204 | Disponible", exercise: "Ordená los resultados: búsqueda del libro, fichas del catálogo, rechazo del segundo préstamo, préstamo registrado y estado disponible tras devolver.", solution: "Primero se imprime la búsqueda y las fichas del catálogo. El primer préstamo cambia el estado y se registra. El segundo lanza LibroNoDisponibleException y no agrega otro préstamo. Devolver restaura el estado disponible.", cues: [] },
+          { at: 0, chapter: "Cierre de la práctica", kicker: "EXPLICAR Y JUSTIFICAR", title: "Del síntoma a la causa", lead: "Una buena respuesta explica la línea, el estado previo y la regla que el código debe respetar.", cards: [["NullPointerException", "Faltó crear el objeto antes de invocar el método."], ["Comparación incorrecta", "Se comparó identidad en vez de contenido."], ["ConcurrentModificationException", "Se modificó la lista fuera del iterador."], ["Excepción checked", "Hay que manejarla o declararla."], ["Polimorfismo", "El tipo real elige la implementación sobrescrita."]] }
+        ]
+      },
+      conceptos: {
+        audio: "./audios_estudio_programacion/02_preguntas_conceptuales_programacion.mp3",
+        slides: [
+          { at: 0, chapter: "Preparar la instancia conceptual", kicker: "PREGUNTAS · UNIDADES 5 A 8", title: "Explicar cómo pensás", lead: "Son las veinte preguntas oficiales, conectadas con el proyecto de biblioteca compilable.", text: "Para cada respuesta: identificá el concepto, explicá su consecuencia y aplicalo a un ejemplo." },
+          { at: 0, chapter: "Pregunta 1 · UML", kicker: "COMPOSICIÓN", title: "Pasaporte y Foto", diagram: "composition", prompt: "¿Qué representa el rombo negro del lado de Pasaporte?", answer: "Una relación fuerte de todo y parte: la parte depende del ciclo de vida del todo. En el proyecto, Prestamo crea su propio PeriodoPrestamo.", codeTitle: "Prestamo.java", code: ["this.material = Objects.requireNonNull(material);", "this.periodo = new PeriodoPrestamo(dias);"], cues: [] },
+          { at: 0, chapter: "Pregunta 2 · UML", kicker: "ASOCIACIÓN DIRIGIDA", title: "Alumno conoce a Tutor", diagram: "directed-association", prompt: "¿Qué indica una flecha abierta desde Alumno hacia Tutor?", answer: "Navegabilidad: Alumno mantiene o recibe una referencia a Tutor; no se deduce que Tutor conozca a Alumno." },
+          { at: 0, chapter: "Pregunta 3 · UML", kicker: "AGREGACIÓN", title: "Auto y Motor", diagram: "aggregation", prompt: "¿Cómo se implementa una agregación en Java?", answer: "El todo tiene una referencia a la parte, pero recibe esa parte creada desde afuera; su existencia no depende del objeto que la contiene." },
+          { at: 0, chapter: "Pregunta 4 · UML", kicker: "DEPENDENCIA", title: "Impresora usa Documento", diagram: "dependency", prompt: "¿Cómo se representa el estereotipo «use» en código?", answer: "Como un uso temporal, normalmente un parámetro de método, y no como un atributo que conserve la referencia." },
+          { at: 0, chapter: "Pregunta 5 · UML", kicker: "VISIBILIDAD", title: "El signo menos", diagram: "visibility", prompt: "¿Qué significa −nombre: String?", answer: "El atributo es private. La clase puede ofrecer un método público para consultarlo, manteniendo el encapsulamiento." },
+          { at: 0, chapter: "Pregunta 6 · Colecciones", kicker: "RELACIÓN 1 A N", title: "Profesor y sus cursos", prompt: "¿Cómo representa Profesor que dicta muchos cursos?", answer: "Con una colección del lado uno, por ejemplo List<Curso> inicializada con new ArrayList<>." },
+          { at: 0, chapter: "Pregunta 7 · Colecciones", kicker: "INICIALIZACIÓN", title: "Una lista declarada sin objeto", prompt: "¿Qué ocurre al ejecutar cursos.add si cursos es null?", answer: "En ejecución se produce NullPointerException: null no es una lista vacía, es una referencia que no apunta a un objeto.", codeTitle: "Forma incorrecta y corrección", code: ["List<String> cursos = null;", "cursos.add(\"Programación II\");", "", "List<String> inicializados = new ArrayList<>();"], cues: [] },
+          { at: 0, chapter: "Pregunta 8 · Colecciones", kicker: "ARRAYLIST", title: "Tamaño dinámico", prompt: "¿Cuál es la principal ventaja de ArrayList frente al arreglo?", answer: "Su tamaño puede cambiar cuando se agregan o eliminan elementos. El arreglo conserva el tamaño fijado al crearlo." },
+          { at: 0, chapter: "Pregunta 9 · Colecciones", kicker: "ENUM", title: "Categorías cerradas", prompt: "¿Qué representa un enum?", answer: "Un conjunto fijo y nombrado de valores. EstadoSocio restringe las opciones a ACTIVO, SUSPENDIDO y MOROSO.", codeTitle: "EstadoSocio.java", code: ["public enum EstadoSocio {", "    ACTIVO, SUSPENDIDO, MOROSO", "}"], cues: [] },
+          { at: 0, chapter: "Pregunta 10 · Colecciones", kicker: "FOR-EACH", title: "Recorrer una colección", prompt: "¿Qué hace for (Item i : items)?", answer: "Visita cada elemento y lo asigna a i, sin administrar índices. Si hace falta eliminar durante el recorrido, se usa Iterator." },
+          { at: 0, chapter: "Pregunta 11 · Herencia", kicker: "EXTENDS", title: "Perro es un Animal", prompt: "¿Qué expresa extends?", answer: "Que la subclase hereda miembros de la superclase; la relación se lee «es un». Libro extiende MaterialPrestable en el ejemplo." },
+          { at: 0, chapter: "Pregunta 12 · Herencia", kicker: "SUPER", title: "Llamar al constructor padre", prompt: "¿Qué hace super(nombre, edad)?", answer: "Invoca el constructor de la superclase para inicializar la parte heredada del objeto y debe ir primero en el constructor." },
+          { at: 0, chapter: "Pregunta 13 · Herencia", kicker: "OVERRIDE", title: "Confirmar la sobrescritura", prompt: "¿Qué indica @Override?", answer: "Que el método pretende sobrescribir uno heredado. El compilador verifica que existe una firma compatible." },
+          { at: 0, chapter: "Pregunta 14 · Herencia", kicker: "ABSTRACCIÓN", title: "Una clase que no se instancia", prompt: "¿Qué caracteriza a una clase abstracta?", answer: "No puede construirse directamente; puede reunir estado y comportamiento común y declarar métodos que las subclases deben implementar.", codeTitle: "MaterialBiblioteca.java", code: ["public abstract class MaterialBiblioteca {", "    private final String codigo;", "    public abstract String mostrarFicha();", "}"], cues: [] },
+          { at: 0, chapter: "Pregunta 15 · Herencia", kicker: "POLIMORFISMO", title: "Animal a = new Perro()", prompt: "Si Perro sobrescribe hacerSonido, ¿qué versión se ejecuta?", answer: "La de Perro: la referencia determina los métodos disponibles, pero el tipo real del objeto decide la implementación sobrescrita." },
+          { at: 0, chapter: "Pregunta 16 · Interfaces", kicker: "CONTRATO", title: "La interfaz Pagable", prompt: "¿Qué es una interfaz en Java?", answer: "Un contrato de operaciones. Prestable declara prestar, devolver y estaPrestado; una clase implementadora ofrece esas operaciones.", codeTitle: "Prestable.java", code: ["public interface Prestable {", "    void prestar() throws LibroNoDisponibleException;", "    void devolver();", "    boolean estaPrestado();", "}"], cues: [] },
+          { at: 0, chapter: "Pregunta 17 · Interfaces", kicker: "VARIAS CAPACIDADES", title: "Implementar más de un contrato", prompt: "¿Cómo combina Java varios comportamientos si no hay herencia múltiple de clases?", answer: "Una clase puede implementar varias interfaces, separadas por comas. Cada contrato declara una capacidad distinta." },
+          { at: 0, chapter: "Pregunta 18 · Excepciones", kicker: "FINALLY", title: "Liberar recursos", prompt: "¿Cuándo se ejecuta finally?", answer: "Al salir del try y el catch, con o sin excepción, salvo que el proceso termine abruptamente. Se usa para el cierre seguro de recursos." },
+          { at: 0, chapter: "Pregunta 19 · Excepciones", kicker: "CHECKED", title: "IOException", prompt: "¿Qué obliga a hacer una excepción checked?", answer: "Capturarla con try/catch o declararla con throws. NullPointerException es unchecked; el compilador no obliga a capturarla." },
+          { at: 0, chapter: "Pregunta 20 · Excepciones", kicker: "THROW", title: "Lanzar una excepción", prompt: "¿Qué hace throw new LibroNoDisponibleException(...)?", answer: "Crea y lanza explícitamente una excepción; interrumpe el camino normal y busca un catch que la maneje.", codeTitle: "MaterialPrestable.java", code: ["if (prestado) {", "    throw new LibroNoDisponibleException(getTitulo());", "}"], cues: [] },
+          { at: 0, chapter: "Cierre", kicker: "RAZONAR EN VOZ ALTA", title: "Concepto, evidencia, consecuencia", lead: "Usá el código como evidencia para defender tu respuesta.", cards: [["Identificá", "Qué símbolo, referencia o instrucción aparece."], ["Explicá", "Qué regla del lenguaje o del modelo aplica."], ["Predecí", "Qué estado, mensaje o resultado produce."], ["Justificá", "Cómo lo corregirías si el resultado no es el esperado."]] }
+        ]
+      }
+    };
+
+    const quizSets = {
+      practica: [
+        { text: "¿Qué relación representa `this.portada = new Portada(...)` dentro del constructor de Libro?", code: ["public Libro(String titulo) {", "    this.portada = new Portada(titulo);", "}"], options: ["Una dependencia de uso: Portada solo llega por parámetro.", "Una composición: Libro crea y administra su parte.", "Una agregación: Portada se recibe ya creada.", "Una asociación bidireccional."], correct: 1, explanation: "La instancia se crea dentro del todo y queda asociada a su ciclo de vida." },
+        { text: "Auto recibe un Motor existente con `new Auto(motor)`. ¿Qué propiedad distingue ese caso de la composición?", code: ["Motor motor = new Motor(\"V8\");", "Auto auto = new Auto(motor);"], options: ["El motor puede existir independientemente del auto.", "El constructor de Auto crea siempre dos motores.", "Auto hereda de Motor.", "La referencia no puede guardarse como atributo."], correct: 0, explanation: "En la agregación la parte llega ya creada y conserva su existencia independiente." },
+        { text: "¿Qué condición corta la sincronización circular entre los setters de una asociación bidireccional?", code: ["if (otro != null && otro.getDueno() != this) {", "    otro.setDueno(this);", "}"], options: ["Llamar ambos setters incondicionalmente.", "Comprobar que el otro extremo todavía no apunte a este objeto.", "Hacer la relación static.", "Lanzar StackOverflowError manualmente."], correct: 1, explanation: "La condición evita volver a invocar el setter cuando la relación ya está sincronizada." },
+        { text: "Posnet procesa $10.000 en cinco cuotas y aplica 3% por cuota adicional a la primera. ¿Cuánto vale cada cuota?", options: ["$2.000", "$2.060", "$2.240", "$2.300"], correct: 2, explanation: "Son cuatro cuotas adicionales: 12% de recargo, total $11.200 y cuota de $2.240." },
+        { text: "El pago no cumple la cantidad permitida de cuotas. ¿Qué transición preserva la regla del dominio?", code: ["if (cuotas < 1 || cuotas > 6) {", "    return null;", "}", "tarjeta.descontar(total);"], options: ["Descontar primero y devolver null después.", "Crear Ticket y corregirlo en el catch.", "Devolver null antes de modificar el saldo.", "Aceptar cualquier cantidad si hay saldo."], correct: 2, explanation: "La validación ocurre antes de cualquier cambio de saldo o creación de un pago aceptado." },
+        { text: "¿Qué sucede cuando `cursos` nunca se inicializa y se ejecuta `cursos.add(\"Java\")`?", code: ["List<String> cursos;", "cursos.add(\"Java\");"], options: ["Error de compilación porque falta add.", "NullPointerException en ejecución.", "La JVM crea una lista vacía automáticamente.", "ConcurrentModificationException."], correct: 1, explanation: "La declaración crea la referencia, no la lista; su valor inicial es null." },
+        { text: "¿Qué elimina `productos.remove(1)` cuando `productos` es una lista?", options: ["El producto cuyo identificador es el texto \"1\".", "El elemento que ocupa el índice 1.", "Siempre elimina el último producto.", "No compila porque remove solo recibe objetos."], correct: 1, explanation: "El argumento int selecciona la sobrecarga que elimina por posición." },
+        { text: "En Fábrica → Sucursal → Instrumento, ¿quién debe administrar y modificar la colección de instrumentos?", options: ["Fábrica, accediendo directamente a todos los campos.", "Sucursal, que encapsula sus instrumentos; Fábrica delega.", "Instrumento, porque se agrega a sí mismo.", "Una clase global static."], correct: 1, explanation: "La operación pertenece a Sucursal, que mantiene el estado de esa colección." },
+        { text: "¿Cómo compara correctamente una búsqueda dos códigos String ignorando mayúsculas?", code: ["if (material.getCodigo().equalsIgnoreCase(codigo.trim())) {", "    return material;", "}"], options: ["Con `==`, que compara las letras.", "Con `equalsIgnoreCase`, que compara contenido.", "Con `ordinal()`.", "Con asignación `=`."], correct: 1, explanation: "equalsIgnoreCase compara el contenido textual sin distinguir mayúsculas." },
+        { text: "¿Por qué es riesgoso quitar elementos directamente durante un for-each?", code: ["for (String codigo : codigos) {", "    if (codigo.equals(\"UML\")) {", "        codigos.remove(codigo);", "    }", "}"], options: ["El for-each solo admite números.", "Puede lanzar ConcurrentModificationException porque la lista cambia fuera del iterador.", "Convierte el elemento en null.", "La lista se vuelve inmutable."], correct: 1, explanation: "Cuando se modifica durante el recorrido, debe usarse el iterador o un for con índice apropiado." },
+        { text: "¿Qué protege un downcast antes de convertir `Animal` a `Perro`?", code: ["if (animal instanceof Perro) {", "    Perro perro = (Perro) animal;", "}"], options: ["Que la referencia siempre sea null.", "Que el objeto real pertenezca a Perro y no produzca ClassCastException.", "Que el compilador seleccione una sobrecarga.", "Que Perro herede de varias clases."], correct: 1, explanation: "instanceof comprueba el tipo real antes del cast." },
+        { text: "En `Animal a = new Perro(); a.hacerSonido();`, ¿qué establece cada tipo?", code: ["Animal a = new Perro();", "a.hacerSonido();"], options: ["La referencia habilita los métodos; el objeto Perro decide la sobrescritura en ejecución.", "La referencia decide siempre la implementación y el objeto no importa.", "El compilador convierte Perro en otra clase.", "La instrucción es una sobrecarga."], correct: 0, explanation: "El tipo estático restringe las operaciones disponibles y el tipo real determina el despacho dinámico." },
+        { text: "¿Qué permite esta declaración de `Pato`?", code: ["class Pato implements Volador, Nadador {", "    public void volar() { ... }", "    public void nadar() { ... }", "}"], options: ["Extender dos clases.", "Cumplir dos contratos de interfaz.", "Crear una interfaz dentro de una clase.", "Evitar implementar los métodos declarados."], correct: 1, explanation: "Java permite implementar varias interfaces aunque una clase solo pueda extender una clase." },
+        { text: "Dos interfaces definen el mismo método `default`. ¿Cómo elige `Pato` explícitamente la versión de `Volador`?", code: ["@Override", "public void moverse() {", "    Volador.super.moverse();", "}"], options: ["`super.moverse()`", "`Volador.super.moverse()`", "`Volador.moverse()`", "No puede resolver el conflicto."], correct: 1, explanation: "La clase concreta sobrescribe el método y califica la implementación elegida con el nombre de la interfaz." },
+        { text: "¿Qué exige el compilador si `leerArchivo` puede producir `IOException`?", code: ["void leerArchivo() {", "    Files.readString(ruta);", "}"], options: ["Nada: toda excepción se ignora automáticamente.", "Capturarla con `try/catch` o declararla con `throws IOException`.", "Convertirla obligatoriamente en `NullPointerException`.", "Usar `throw` en la firma del método."], correct: 1, explanation: "IOException es checked: el método debe capturarla o declarar que puede propagarla." },
+        { text: "¿Qué declara `throws` en esta firma?", code: ["void validarEdad(int edad) throws EdadInvalidaException {", "    if (edad < 0) throw new EdadInvalidaException(\"Edad inválida\");", "}"], options: ["Que el método captura la excepción.", "Que el método puede propagar esa excepción al llamador.", "Que la excepción ya fue lanzada al cargar la clase.", "Que EdadInvalidaException es necesariamente unchecked."], correct: 1, explanation: "`throw` lanza la instancia; `throws` declara la posibilidad en la firma." },
+        { text: "Al terminar el `try`, ¿qué sucede con el lector declarado como recurso?", code: ["try (BufferedReader lector = Files.newBufferedReader(ruta)) {", "    System.out.println(lector.readLine());", "}"], options: ["Queda abierto para usarlo en cualquier método.", "Se cierra automáticamente al salir del bloque.", "Se cierra solo si ocurre una excepción.", "Se transforma en una lista."], correct: 1, explanation: "try-with-resources cierra automáticamente los recursos que implementan AutoCloseable." },
+        { text: "¿Qué efecto tiene este bloque cuando `procesar()` termina normalmente?", code: ["try {", "    procesar();", "} finally {", "    liberarRecurso();", "}"], options: ["`finally` no se ejecuta si no hubo excepción.", "`finally` se ejecuta al salir del `try` también en el camino normal.", "El método `procesar` se repite.", "`finally` captura cualquier excepción."], correct: 1, explanation: "`finally` se ejecuta al abandonar el bloque, tanto si hubo excepción como si no, salvo terminación abrupta del proceso." },
+        { text: "¿Qué conclusión describe correctamente `int resultado = 13 * 12 * ... * 1;`?", code: ["int factorial = 1;", "for (int n = 1; n <= 13; n++) {", "    factorial *= n;", "}"], options: ["El resultado representa exactamente 13! porque cabe en cualquier `int`.", "El cálculo desborda el rango de `int` y deja un valor incorrecto.", "Java convierte automáticamente el resultado a `BigInteger`.", "El programa siempre lanza `ArithmeticException` al desbordar."], correct: 1, explanation: "13! excede el rango de int; el desbordamiento entero no lanza automáticamente ArithmeticException." },
+        { text: "¿Qué falta para que `Circulo` sea una clase concreta válida?", code: ["abstract class Figura {", "    abstract double area();", "}", "class Circulo extends Figura { }"], options: ["Declarar `Circulo` como `enum`.", "Implementar `area()` o declarar también `Circulo` como abstracta.", "Eliminar `extends Figura`.", "Agregar un método `static main`."], correct: 1, explanation: "Una subclase concreta debe implementar los métodos abstractos heredados; si no lo hace, también debe ser abstracta." }
+      ],
+      conceptos: [
+        { text: "U5 · UML es…", options: ["un lenguaje de programación orientado a objetos", "un lenguaje de modelado para representar sistemas", "una librería de Java", "un IDE"], correct: 1, explanation: "UML modela la estructura; no ejecuta programas." },
+        { text: "U5 · En UML, un rombo negro indica…", options: ["asociación", "agregación", "composición", "herencia"], correct: 2, explanation: "El rombo relleno junto al todo señala composición." },
+        { text: "U5 · Si el objeto llega creado por el constructor y sobrevive al contenedor, es…", options: ["composición", "agregación", "dependencia de creación", "herencia"], correct: 1, explanation: "En la agregación, la parte conserva vida independiente." },
+        { text: "U5 · Sin condición de corte en una relación bidireccional se produce…", options: ["NullPointerException", "ClassCastException", "StackOverflowError", "nada; funciona"], correct: 2, explanation: "Los setters se llaman recursivamente hasta agotar la pila." },
+        { text: "U5 · Un método recibe un objeto por parámetro y lo usa. Es una dependencia de…", options: ["uso", "creación", "composición", "agregación"], correct: 0, explanation: "La relación de uso es temporal y aparece durante la operación." },
+        { text: "U5 · ¿Qué buscamos en un buen diseño?", options: ["alta cohesión y alto acoplamiento", "baja cohesión y bajo acoplamiento", "alta cohesión y bajo acoplamiento", "baja cohesión y alto acoplamiento"], correct: 2, explanation: "Las responsabilidades enfocadas y menos dependencias hacen el diseño más mantenible." },
+        { text: "U5 · $10.000 en cinco cuotas, con 3% por cuota adicional. ¿Cuánto vale cada cuota?", options: ["$2.000", "$2.060", "$2.240", "$2.300"], correct: 2, explanation: "El recargo es 4 × 3% = 12%; el total $11.200 dividido en cinco da $2.240." },
+        { text: "U6 · Una lista declarada sin `new` recibe una llamada a `add`. ¿Qué ocurre?", options: ["Se agrega normalmente", "NullPointerException", "Error de compilación", "IndexOutOfBoundsException"], correct: 1, explanation: "La variable no apunta a una instancia de lista." },
+        { text: "U6 · ¿Qué método devuelve la cantidad de elementos de ArrayList?", options: ["length", "length()", "size()", "count()"], correct: 2, explanation: "size devuelve el número actual de elementos." },
+        { text: "U6 · Para `enum Color { ROJO, VERDE, AZUL }`, ¿qué devuelve `Color.VERDE.ordinal()`?", options: ["0", "1", "2", "\"VERDE\""], correct: 1, explanation: "ordinal comienza en cero; VERDE ocupa la segunda posición." },
+        { text: "U6 · ¿Cuándo no conviene usar for-each?", options: ["para imprimir elementos", "para sumar precios", "para eliminar elementos mientras se recorre", "para contar elementos"], correct: 2, explanation: "Modificar directamente la colección puede lanzar ConcurrentModificationException." },
+        { text: "U6 · Para comparar el contenido de dos String en una búsqueda se usa…", options: ["==", "equals()", "compare", "="], correct: 1, explanation: "equals compara contenido; == compara referencias." },
+        { text: "U6 · En UML, la multiplicidad `1..*` significa…", options: ["exactamente uno", "cero o uno", "uno o más", "ninguno"], correct: 2, explanation: "El límite inferior es uno y el superior no está acotado." },
+        { text: "U7 · La palabra clave para heredar de una clase es…", options: ["implements", "extends", "inherits", "super"], correct: 1, explanation: "extends declara la superclase." },
+        { text: "U7 · `super(...)` en un constructor debe estar…", options: ["al final", "en cualquier lugar", "en la primera línea", "fuera del constructor"], correct: 2, explanation: "La construcción de la superclase precede a la inicialización de la subclase." },
+        { text: "U7 · `Animal a = new Perro();` es un ejemplo de…", options: ["downcasting", "upcasting", "sobrecarga", "error de compilación"], correct: 1, explanation: "La referencia del tipo padre apunta a un objeto hijo." },
+        { text: "U7 · Si `Animal a = new Gato();`, ¿qué ocurre con `(Perro) a`?", options: ["funciona", "error de compilación", "ClassCastException", "NullPointerException"], correct: 2, explanation: "El objeto real es Gato y no puede convertirse en Perro." },
+        { text: "U7 · Una clase abstracta…", options: ["no puede tener atributos", "no se puede instanciar", "no puede tener constructor", "solo tiene métodos abstractos"], correct: 1, explanation: "Puede tener estado, constructores y métodos concretos; no se instancia directamente." },
+        { text: "U7 · Mismo nombre de método y distintos parámetros en la misma clase es…", options: ["sobrescritura", "sobrecarga", "herencia", "encapsulamiento"], correct: 1, explanation: "La sobrecarga se selecciona en compilación a partir de los parámetros." },
+        { text: "U7 · ¿Qué decide la versión de un método sobrescrito?", options: ["el tipo de referencia", "el tipo real del objeto en ejecución", "el orden de declaración", "el compilador siempre"], correct: 1, explanation: "El despacho dinámico elige según el tipo real." },
+        { text: "U8 · Una clase puede…", options: ["extender varias clases", "implementar varias interfaces", "implementar una sola interfaz", "no implementar interfaces si extiende una clase"], correct: 1, explanation: "Java permite una superclase y varias interfaces." },
+        { text: "U8 · Un método con cuerpo dentro de una interfaz se declara con…", options: ["static", "abstract", "default", "final"], correct: 2, explanation: "default aporta una implementación en la interfaz." },
+        { text: "U8 · Si dos interfaces tienen el mismo default, para llamar al de A se usa…", options: ["super.metodo()", "A.metodo()", "A.super.metodo()", "this.A.metodo()"], correct: 2, explanation: "La implementación elegida se califica con A.super.metodo()." },
+        { text: "U8 · ¿Qué bloque se ejecuta al salir del try con o sin excepción?", options: ["try", "catch", "finally", "throws"], correct: 2, explanation: "finally se ejecuta al abandonar ese flujo, salvo terminación abrupta del proceso." },
+        { text: "U8 · ¿Cuál es una excepción checked?", options: ["NullPointerException", "ArithmeticException", "IOException", "IllegalArgumentException"], correct: 2, explanation: "IOException debe capturarse o declararse." },
+        { text: "U8 · `throw` se usa para…", options: ["declarar una excepción en la firma", "lanzar una excepción", "capturar una excepción", "cerrar recursos"], correct: 1, explanation: "throw ejecuta el lanzamiento; throws lo declara." },
+        { text: "U8 · Con varios catch, el orden correcto es…", options: ["padre antes que hijo", "hijo antes que padre", "da igual", "Exception primero"], correct: 1, explanation: "El subtipo va primero para que la rama específica sea alcanzable." },
+        { text: "U8 · El factorial más grande que cabe en un int es el de…", options: ["10", "12", "13", "20"], correct: 1, explanation: "12! cabe; 13! excede el rango de int." },
+        { text: "Audio conceptual · ¿Por qué `equalsIgnoreCase` es apropiado para buscar un código String?", options: ["Compara la identidad de memoria", "Compara el contenido sin distinguir mayúsculas", "Convierte el código en enum", "Compara solo la longitud"], correct: 1, explanation: "La búsqueda debe comparar las letras, no si ambas variables apuntan al mismo objeto." },
+        { text: "Audio conceptual · ¿Qué comunica una flecha abierta en una asociación dirigida?", options: ["La navegación desde una clase hacia la otra", "La creación obligatoria del objeto destino", "Una relación de herencia", "Que ambos extremos son el mismo objeto"], correct: 0, explanation: "La punta muestra hacia qué tipo puede navegar la referencia." },
+        { text: "Audio conceptual · ¿Qué combinación expresa que un tipo puede participar en varias capacidades?", options: ["Extender varias clases", "Implementar varias interfaces", "Declarar todas las operaciones static", "Usar downcasting sin validar"], correct: 1, explanation: "Una clase Java puede implementar más de una interfaz." },
+        { text: "Audio conceptual · ¿Qué orden conserva el estado en Posnet?", options: ["Descontar, validar y crear Ticket", "Validar cuotas y saldo, descontar y crear Ticket", "Crear Ticket antes de verificar el saldo", "Crear Ticket y devolver null después"], correct: 1, explanation: "La validación precede a cualquier cambio de saldo y a la creación de la operación aceptada." },
+        { text: "Audio conceptual · ¿Qué ventaja aporta declarar `BufferedReader` dentro de try-with-resources?", code: ["try (BufferedReader lector = new BufferedReader(new FileReader(ruta))) {", "    return lector.readLine();", "}"], options: ["El archivo se cierra automáticamente al salir del bloque.", "La lectura deja de lanzar excepciones.", "El lector queda abierto globalmente.", "Se convierte una excepción checked en unchecked."], correct: 0, explanation: "AutoCloseable integra el cierre del recurso con el ciclo de vida del try." },
+        { text: "Audio conceptual · ¿Qué representa un enum para el dominio?", options: ["Una lista que puede contener cualquier texto", "Un conjunto cerrado de valores nombrados", "Una clase abstracta con varios constructores", "Una excepción checked"], correct: 1, explanation: "Las constantes limitan los estados posibles a las opciones declaradas." },
+        { text: "Audio conceptual · ¿Qué afirma `super(marca, modelo)` en el constructor de Auto?", options: ["Llama al constructor padre para inicializar el estado heredado.", "Convierte Auto en una interfaz.", "Sobrecarga mostrarInfo.", "Invoca el recolector de basura."], correct: 0, explanation: "super con argumentos delega la construcción de la parte base." },
+        { text: "Audio conceptual · ¿Qué ocurre si `Animal a = new Gato()` se fuerza a `(Perro) a`?", code: ["Animal a = new Gato();", "Perro p = (Perro) a;"], options: ["Se hace upcasting seguro.", "Se produce ClassCastException al ejecutar.", "Se convierte el objeto real en Perro.", "Se selecciona el constructor de Perro."], correct: 1, explanation: "El cast no cambia el objeto; el objeto real sigue siendo Gato." }
+      ]
+    };
+
+    function renderQuiz(name) {
+      const form = document.getElementById(`quiz-form-${name}`);
+      const questions = quizSets[name];
+      form.innerHTML = questions.map((question, index) => `
+        <fieldset class="quiz-question" data-question-index="${index}">
+          <legend>${index + 1}. ${escapeHtml(question.text)}</legend>
+          ${question.code ? `<pre>${escapeHtml(question.code.join("\n"))}</pre>` : ""}
+          ${question.options.map((option, optionIndex) => `
+            <label class="quiz-option">
+              <input type="radio" name="${name}-${index}" value="${optionIndex}">
+              <span>${escapeHtml(option)}</span>
+            </label>
+          `).join("")}
+          <div class="quiz-question-actions">
+            <button class="quiz-check-answer" type="button" data-check-answer="${index}">Corregir esta pregunta</button>
+          </div>
+          <div class="quiz-feedback" aria-live="polite"></div>
+        </fieldset>${name === "conceptos" && index === 27 ? `
+        <div class="quiz-divider">
+          <h4>8 ejercicios adicionales · audio y presentación</h4>
+          <p>Estos ítems amplían el cuestionario del PDF con comprensión de relaciones UML, código y ejemplos de las unidades explicadas.</p>
+        </div>` : ""}
+      `).join("");
+      updateQuizProgress(name);
+      form.addEventListener("change", event => {
+        const fieldset = event.target instanceof Element ? event.target.closest(".quiz-question") : null;
+        if (fieldset) clearQuestionGrade(fieldset);
+        clearFinalScore(name);
+        updateQuizProgress(name);
+      });
+      form.addEventListener("click", event => {
+        const button = event.target instanceof Element ? event.target.closest("[data-check-answer]") : null;
+        if (!button) return;
+        checkQuestion(name, Number(button.dataset.checkAnswer));
+      });
+      form.addEventListener("submit", event => gradeQuiz(event, name));
+      document.querySelector(`[data-reset="${name}"]`).addEventListener("click", () => resetQuiz(name));
+    }
+
+    function clearQuestionGrade(fieldset) {
+      fieldset.classList.remove("correct", "incorrect", "needs-answer");
+      fieldset.querySelector(".quiz-feedback").textContent = "";
+      const checkButton = fieldset.querySelector(".quiz-check-answer");
+      if (checkButton) checkButton.textContent = "Corregir esta pregunta";
+    }
+
+    function clearFinalScore(name) {
+      const result = document.getElementById(`quiz-result-${name}`);
+      if (!result.classList.contains("scored")) return;
+      result.classList.remove("scored", "needs-review");
+      result.textContent = "Cambiaste una respuesta después de evaluar. Volvé a evaluar todo para actualizar el puntaje.";
+    }
+
+    function checkQuestion(name, index) {
+      const form = document.getElementById(`quiz-form-${name}`);
+      const fieldset = form.querySelector(`[data-question-index="${index}"]`);
+      const selected = fieldset.querySelector("input:checked");
+      const feedback = fieldset.querySelector(".quiz-feedback");
+      clearQuestionGrade(fieldset);
+      if (!selected) {
+        fieldset.classList.add("needs-answer");
+        feedback.textContent = "Elegí una opción antes de corregir esta pregunta.";
+        return;
+      }
+      const question = quizSets[name][index];
+      const correct = Number(selected.value) === question.correct;
+      fieldset.classList.add(correct ? "correct" : "incorrect");
+      feedback.textContent = `${correct ? "Correcto." : "Incorrecto."} ${question.explanation}`;
+      fieldset.querySelector(".quiz-check-answer").textContent = "Volver a corregir";
+    }
+
+    function updateQuizProgress(name) {
+      const form = document.getElementById(`quiz-form-${name}`);
+      const answered = [...form.querySelectorAll(".quiz-question")].filter(fieldset =>
+        fieldset.querySelector("input:checked")
+      ).length;
+      document.getElementById(`quiz-progress-${name}`).textContent =
+        `${answered} de ${quizSets[name].length} respuestas seleccionadas`;
+    }
+
+    function gradeQuiz(event, name) {
+      event.preventDefault();
+      const form = document.getElementById(`quiz-form-${name}`);
+      const questions = quizSets[name];
+      let score = 0;
+      let unanswered = 0;
+      [...form.querySelectorAll(".quiz-question")].forEach((fieldset, index) => {
+        const selected = fieldset.querySelector("input:checked");
+        const feedback = fieldset.querySelector(".quiz-feedback");
+        clearQuestionGrade(fieldset);
+        if (!selected) {
+          unanswered++;
+          fieldset.classList.add("incorrect");
+          feedback.textContent = "Falta seleccionar una respuesta.";
+          return;
+        }
+        if (Number(selected.value) === questions[index].correct) {
+          score++;
+          fieldset.classList.add("correct");
+          feedback.textContent = `Correcto. ${questions[index].explanation}`;
+        } else {
+          fieldset.classList.add("incorrect");
+          feedback.textContent = `Revisá esta relación. ${questions[index].explanation}`;
+        }
+      });
+
+      const result = document.getElementById(`quiz-result-${name}`);
+      result.classList.remove("scored", "needs-review");
+      if (unanswered) {
+        result.textContent = `Quedan ${unanswered} ejercicios sin responder. Completalos para calcular el puntaje final.`;
+        const firstMissing = [...form.querySelectorAll(".quiz-question")]
+          .find(fieldset => !fieldset.querySelector("input:checked"));
+        if (firstMissing) firstMissing.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      const total = questions.length;
+      const percent = Math.round(score / total * 100);
+      result.classList.add("scored");
+      if (percent < 70) result.classList.add("needs-review");
+      const message = percent === 100
+        ? "Dominio completo del cuestionario."
+        : percent >= 70
+          ? "Buen resultado; repasá las respuestas incorrectas."
+          : "Conviene volver a los conceptos y ejemplos señalados.";
+      result.textContent = `Puntaje final: ${score} de ${total} (${percent}%). ${message}`;
+      result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function resetQuiz(name) {
+      const form = document.getElementById(`quiz-form-${name}`);
+      form.reset();
+      form.querySelectorAll(".quiz-question").forEach(clearQuestionGrade);
+      const result = document.getElementById(`quiz-result-${name}`);
+      result.classList.remove("scored", "needs-review");
+      result.textContent = "Corregí las preguntas una por una o evaluá todo para obtener el puntaje final.";
+      updateQuizProgress(name);
+    }
+
+    renderQuiz("practica");
+    renderQuiz("conceptos");
+
+    function applyDeckTiming(name, timings, answerTimings) {
+      const slides = decks[name].slides;
+      if (slides.length !== timings.length) {
+        throw new Error(`La cantidad de marcas temporales no coincide con las diapositivas de ${name}.`);
+      }
+      if (answerTimings && slides.length !== answerTimings.length) {
+        throw new Error(`La cantidad de marcas de respuesta no coincide con las diapositivas de ${name}.`);
+      }
+      slides.forEach((slide, index) => {
+        const at = timings[index];
+        if (!Number.isFinite(at) || at < 0 || (index > 0 && at <= timings[index - 1])) {
+          throw new Error(`Marca temporal inválida en ${name}, diapositiva ${index + 1}.`);
+        }
+        slide.at = at;
+        if (answerTimings && answerTimings[index] !== null) {
+          slide.answerAt = answerTimings[index];
+          if (slide.answerAt <= at) {
+            throw new Error(`Marca de respuesta inválida en ${name}, diapositiva ${index + 1}.`);
+          }
+        }
+      });
+    }
+
+    applyDeckTiming("practica", [
+      0, 48.60, 72.66, 110.08, 144.40, 170.96, 190.90, 238.12, 266.10,
+      282.06, 332.36, 353.96, 419.58, 473.84, 522.44, 574.27, 637.80
+    ]);
+    applyDeckTiming("conceptos", [
+      0, 36.42, 86.12, 109.58, 148.48, 172.24, 198.58, 235.36, 265.92,
+      289.84, 308.48, 337.82, 361.24, 381.34, 402.64, 428.78, 463.24,
+      487.08, 509.66, 536.10, 557.88, 583.36
+    ], [
+      null, 46.84, 93.32, 118.80, 158.32, 179.22, 206.32, 244.78, 272.76,
+      294.34, 316.52, 342.94, 367.72, 386.24, 408.14, 438.44, 468.38,
+      496.02, 514.46, 542.58, 561.72, null
+    ]);
+
+    const catalogSlide = decks.practica.slides[9];
+    Object.assign(catalogSlide, {
+      title: "Registrar y buscar sin comparar referencias",
+      lead: "La biblioteca evita códigos duplicados, compara el contenido y comprueba el resultado antes de usarlo.",
+      codeTitle: "Biblioteca.java · registrar() y buscarPorCodigo()",
+      code: [
+        "public void registrar(MaterialBiblioteca material) {",
+        "    Objects.requireNonNull(material, \"El material es obligatorio\");",
+        "    for (MaterialBiblioteca actual : materiales) {",
+        "        if (actual.getCodigo().equalsIgnoreCase(material.getCodigo())) {",
+        "            throw new IllegalArgumentException(\"Ya existe el código \" + material.getCodigo());",
+        "        }",
+        "    }",
+        "    materiales.add(material);",
+        "}",
+        "",
+        "public MaterialBiblioteca buscarPorCodigo(String codigo) {",
+        "    Objects.requireNonNull(codigo, \"El código es obligatorio\");",
+        "    for (MaterialBiblioteca material : materiales) {",
+        "        if (material.getCodigo().equalsIgnoreCase(codigo.trim())) {",
+        "            return material;",
+        "        }",
+        "    }",
+        "    return null;",
+        "}"
+      ],
+      cards: [
+        ["equalsIgnoreCase", "Compara el contenido sin distinguir mayúsculas."],
+        ["for-each", "Recorre los materiales del catálogo."],
+        ["return null", "La búsqueda no encontró un código coincidente."],
+        ["Comprobación", "El programa valida que el resultado no sea null antes de mostrar la ficha."]
+      ]
+    });
+
+    const practiceCues = {
+      1: [{ from: 48.60, to: 72.66, card: 0 }],
+      2: [
+        { from: 72.66, to: 79.28, lines: [4] },
+        { from: 79.28, to: 86.12, lines: [4], card: 1 },
+        { from: 86.12, to: 110.08, lines: [7, 8, 9], card: 2 }
+      ],
+      3: [
+        { from: 110.08, to: 122, lines: [1], card: 0 },
+        { from: 122, to: 128, lines: [2, 3], card: 1 },
+        { from: 128, to: 137, lines: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] },
+        { from: 137, to: 144.40, lines: [16], card: 3 }
+      ],
+      4: [
+        { from: 144.40, to: 154, lines: [1], card: 3 },
+        { from: 154, to: 161, lines: [3, 4, 5, 6], card: 0 },
+        { from: 161, to: 168, lines: [7], card: 1 },
+        { from: 168, to: 170.96, lines: [9, 13], card: 2 }
+      ],
+      5: [
+        { from: 170.96, to: 177, lines: [1, 4, 5], card: 0 },
+        { from: 177, to: 184, lines: [14, 15, 16, 17], card: 1 },
+        { from: 184, to: 190.90, lines: [14, 15, 16, 17], card: 3 }
+      ],
+      6: [
+        { from: 190.90, to: 205, lines: [1], card: 0 },
+        { from: 205, to: 222, lines: [2], card: 2 },
+        { from: 222, to: 238.12, lines: [1, 2], card: 1 }
+      ],
+      7: [
+        { from: 238.12, to: 250, lines: [1, 2], card: 0 },
+        { from: 250, to: 258, lines: [3, 4, 5, 6], card: 1 },
+        { from: 258, to: 266.10, lines: [8], card: 3 }
+      ],
+      8: [
+        { from: 266.10, to: 274, lines: [1, 2, 3, 4], card: 0 },
+        { from: 274, to: 282, lines: [7, 8, 9], card: 2 }
+      ],
+      9: [
+        { from: 282.06, to: 294, lines: [1, 2, 3, 4, 5], card: 1 },
+        { from: 294, to: 308, lines: [4, 5, 6], card: 0 },
+        { from: 308, to: 321, lines: [11, 12, 13, 14, 15, 16, 17, 18], card: 2 },
+        { from: 321, to: 332.36, lines: [15, 18], card: 3 }
+      ],
+      10: [
+        { from: 332.36, to: 339, lines: [1, 2, 3], card: 0 },
+        { from: 339, to: 346, lines: [7], card: 1 },
+        { from: 346, to: 353.96, lines: [8, 9], card: 3 }
+      ],
+      11: [
+        { from: 353.96, to: 366, lines: [1, 2, 3, 4], card: 0 },
+        { from: 366, to: 378, lines: [7, 8, 9], card: 1 },
+        { from: 378, to: 397, lines: [10, 11, 12], card: 2 },
+        { from: 397, to: 419.58, lines: [10, 11, 12], card: 2 }
+      ],
+      12: [{ from: 419.58, to: 473.84, lines: [1, 2] }],
+      13: [{ from: 473.84, to: 522.44, lines: [2, 3, 4, 8, 9, 10] }],
+      14: [{ from: 522.44, to: 574.27, lines: [4, 5, 6, 7] }],
+      15: [{ from: 574.27, to: 637.80, lines: [1, 7, 8, 9, 10, 11, 13, 14, 17, 18, 19, 20, 21, 22, 24, 25] }],
+      16: [{ from: 637.80, to: 675.48, card: 0 }]
+    };
+    Object.entries(practiceCues).forEach(([index, cues]) => {
+      decks.practica.slides[Number(index)].cues = cues;
+    });
+
+    function slidesAt(times, content, duration) {
+      if (times.length !== content.length) throw new Error("Cada diapositiva necesita una marca temporal.");
+      return content.map((slide, index) => {
+        const next = times[index + 1] ?? duration;
+        const lines = slide.highlightLines || slide.code?.map((_, line) => line + 1);
+        const cues = lines?.length ? [{ from: times[index], to: next, lines }] :
+          slide.cards ? [{ from: times[index], to: next, card: slide.highlightCard || 0 }] : [];
+        return { ...slide, at: times[index], cues };
+      });
+    }
+
+    Object.assign(decks, {
+      practica: {
+        audio: "./audios_estudio_programacion/01_practica_codigo_programacion.mp3",
+        slides: slidesAt([
+          0, 32.10, 73.32, 108.20, 135.90, 206.64, 294.90, 348.54, 402.87,
+          495.87, 542.85, 570.99, 648.81, 708.21, 778.91
+        ], [
+          { kicker: "UNIDAD 5 · UML", title: "La clase como estructura de estado y operaciones", lead: "El modelo delimita qué conoce un objeto y qué decisiones puede tomar.", diagram: "visibility", codeTitle: "Notación de clase", code: ["Persona", "- nombre: String", "- edad: int", "+ getNombre(): String", "+ cumplirAnios(): void"], cards: [["Nombre", "Identifica el tipo del dominio."], ["Atributos", "Describen el estado y su visibilidad."], ["Métodos", "Definen las operaciones públicas del objeto."]] },
+          { kicker: "UNIDAD 5 · ASOCIACIÓN", title: "El origen de una referencia determina el vínculo", lead: "Una asociación relaciona objetos independientes; la flecha abierta indica navegación.", diagram: "directed-association", codeTitle: "Referencia asignada desde afuera", code: ["Pasaporte pasaporte = new Pasaporte(...);", "persona.setPasaporte(pasaporte);"], cards: [["Asociación", "Persona conoce a Pasaporte; ambos objetos pueden existir por separado."], ["Navegabilidad", "La flecha marca la dirección en que se recorre la referencia."]] },
+          { kicker: "UNIDAD 5 · AGREGACIÓN Y COMPOSICIÓN", title: "Rombo vacío y rombo relleno", lead: "El diagrama distingue si la parte conserva independencia o pertenece al ciclo de vida del todo.", diagram: "composition", codeTitle: "Creación de la parte", code: ["this.portada = new Portada(titulo);"], cards: [["Agregación · rombo vacío", "Auto recibe Motor ya creado; el motor puede sobrevivir al auto."], ["Composición · rombo negro", "Libro crea Portada y administra la parte junto con su ciclo de vida."]] },
+          { kicker: "UNIDAD 5 · MULTIPLICIDAD", title: "Una relación, dos referencias sincronizadas", lead: "Uno a muchos se traduce en una colección; una relación bidireccional exige coherencia en ambos extremos.", codeTitle: "Departamento.java · agregarEmpleado()", code: ["public void agregarEmpleado(Empleado e) {", "    if (e != null && !empleados.contains(e)) {", "        empleados.add(e);", "        e.setDepartamento(this);", "    }", "}"], cards: [["1..*", "Uno o más elementos en el extremo múltiple."], ["Condición de corte", "El setter inverso se ejecuta solo si todavía falta sincronizar la referencia."], ["Evitar duplicados", "contains comprueba pertenencia antes de agregar."]] },
+          { kicker: "UNIDAD 5 · DEPENDENCIAS", title: "Usar, crear y distribuir responsabilidades", lead: "La duración de una referencia y la responsabilidad de cada clase modifican el acoplamiento.", diagram: "dependency", codeTitle: "Tell, Don't Ask", code: ["if (tarjeta.tieneSaldoDisponible(total)) {", "    tarjeta.descontar(total);", "}"], cards: [["use", "Documento llega como parámetro y se usa durante imprimir."], ["create", "El método crea un Usuario y conoce su constructor."], ["Diseño", "Alta cohesión y bajo acoplamiento."]] },
+          { kicker: "UNIDAD 5 · POSNET", title: "Validar antes de modificar el saldo", lead: "La operación cambia el estado solo cuando las cuotas y el saldo cumplen las reglas.", codeTitle: "Posnet · efectuarPago()", code: ["if (cuotas < 1 || cuotas > 6) return null;", "double total = monto * (1 + (cuotas - 1) * 0.03);", "if (!tarjeta.tieneSaldoDisponible(total)) return null;", "tarjeta.descontar(total);", "return new Ticket(total, cuotas);"], cards: [["Regla de cuotas", "Entre una y seis; el recargo se aplica a las adicionales."], ["10.000 en 5 cuotas", "12% de recargo: total 11.200 y cada cuota 2.240."], ["Invariante", "Un pago rechazado no descuenta ni crea Ticket."]] },
+          { kicker: "UNIDAD 6 · ARRAYLIST", title: "Declarar una referencia no crea una lista", lead: "ArrayList cambia de tamaño; la referencia debe apuntar a una instancia antes de invocar sus métodos.", codeTitle: "Lista de productos", code: ["ArrayList<Producto> productos = new ArrayList<>();", "productos.add(producto);", "int cantidad = productos.size();", "Producto actual = productos.get(0);"], cards: [["Array", "Cantidad fija de posiciones."], ["ArrayList", "Crece y se reduce al agregar y quitar elementos."], ["Sin new", "La referencia null produce NullPointerException al usar add."]] },
+          { kicker: "UNIDAD 6 · RELACIÓN 1:N", title: "La clase del lado uno administra la colección", lead: "Fábrica organiza sucursales y cada sucursal conserva sus propios instrumentos.", codeTitle: "Sucursal.java", code: ["private final List<Instrumento> instrumentos = new ArrayList<>();", "", "public void agregarInstrumento(Instrumento instrumento) {", "    instrumentos.add(instrumento);", "}"], cards: [["Encapsulamiento", "Fábrica delega en Sucursal y no modifica su lista interna."], ["Bidireccionalidad", "Departamento y Empleado actualizan los dos extremos."], ["Remove", "Un entero selecciona el índice; un objeto selecciona por igualdad."]] },
+          { kicker: "UNIDAD 6 · BÚSQUEDA Y ENUM", title: "Comparar el valor y conservar estados válidos", lead: "La búsqueda recorre elementos; el enum restringe categorías a un conjunto cerrado.", codeTitle: "Búsqueda y tipo enumerado", code: ["if (instrumento.getId().equalsIgnoreCase(id)) {", "    return instrumento;", "}", "", "enum TipoInstrumento { PERCUSION, VIENTO, CUERDA }", "TipoInstrumento.VIENTO.ordinal();"], cards: [["Búsqueda lineal", "Compara cada identificador; si no aparece, devuelve null."], ["String", "equals compara contenido; == compara referencias."], ["Enum", "values, valueOf, name y ordinal; la primera posición es cero."]] },
+          { kicker: "UNIDAD 7 · HERENCIA", title: "Construir primero la parte heredada", lead: "extends representa una relación es-un; los constructores no se heredan.", codeTitle: "Perro.java", code: ["public class Perro extends Animal {", "    private String raza;", "    public Perro(String nombre, String raza) {", "        super(nombre);", "        this.raza = raza;", "    }", "}"], cards: [["Superclase", "La parte Animal se inicializa primero."], ["super(...)", "Llama al constructor padre y ocupa la primera instrucción."], ["Herencia simple", "Una clase extiende una sola clase."]] },
+          { kicker: "UNIDAD 7 · ABSTRACTAS", title: "Un contrato común con implementaciones concretas", lead: "Figura comparte datos y deja que cada subtipo defina su área.", codeTitle: "Figura.java · Circulo.java", code: ["public abstract class Figura {", "    protected String nombre;", "    public abstract double area();", "}", "", "public class Circulo extends Figura {", "    @Override public double area() { return ...; }", "}"], cards: [["Abstract", "La clase no se instancia directamente."], ["Método abstracto", "Declara una operación sin cuerpo que la clase concreta completa."], ["final", "Impide extender una clase o sobrescribir un método."]] },
+          { kicker: "UNIDAD 7 · POLIMORFISMO", title: "El tipo real elige el método sobrescrito", lead: "La referencia habilita operaciones; la instancia concreta decide el despacho dinámico.", codeTitle: "Animal.java · Perro.java", code: ["Animal animal = new Perro();", "animal.hacerSonido();", "", "if (animal instanceof Perro) {", "    Perro perro = (Perro) animal;", "    perro.ladrar();", "}"], cards: [["Upcasting", "El hijo se trata como padre de forma automática y segura."], ["Downcasting", "El cast puede fallar; instanceof verifica el tipo real."], ["Sobrecarga", "Distintos parámetros; elección en compilación."], ["Override", "Misma firma heredada; despacho en ejecución."]] },
+          { kicker: "UNIDAD 8 · INTERFACES", title: "Una clase, varias capacidades", lead: "La interfaz define qué operaciones promete un tipo; la implementación concreta define cómo.", codeTitle: "Volador.java · Nadador.java · Pato.java", code: ["interface Volador { void volar(); }", "interface Nadador { void nadar(); }", "class Pato implements Volador, Nadador {", "    public void volar() { ... }", "    public void nadar() { ... }", "}"], cards: [["implements", "Una clase puede cumplir varias interfaces."], ["Interfaz", "Contrato de capacidad: puede hacer."], ["Clase abstracta", "Puede compartir estado y construcción: es un."]] },
+          { kicker: "UNIDAD 8 · EXCEPCIONES", title: "La excepción define el flujo ante una condición inválida", lead: "throw ejecuta el lanzamiento; throws declara la posibilidad en la firma.", codeTitle: "Checked, catch y recursos", code: ["void leer() throws IOException {", "    try (BufferedReader br = abrir()) {", "        procesar(br);", "    } catch (IOException ex) {", "        registrar(ex);", "    }", "}"], cards: [["Checked", "IOException se captura o se declara."], ["Unchecked", "NullPointerException y ArithmeticException no exigen declaración."], ["Orden", "El catch específico aparece antes que el padre."], ["Cierre", "try-with-resources cierra objetos AutoCloseable."]] },
+          { kicker: "UNIDAD 8 · LÍMITES", title: "El tipo numérico también limita la operación", lead: "El resultado de una expresión depende del rango que puede representar su tipo.", codeTitle: "Factorial con int", code: ["12! cabe dentro del rango de int.", "13! excede el rango y desborda."], cards: [["Excepción propia", "Puede modelar una regla del dominio y transportar un mensaje."], ["finally", "Completa el cierre al salir del flujo, con o sin excepción."], ["Resultado", "Un cálculo puede ejecutarse sin error y aun así superar el rango del tipo."]] }
+        ], 800.09)
+      },
+      conceptos: {
+        audio: "./audios_estudio_programacion/02_preguntas_conceptuales_programacion.mp3",
+        slides: slidesAt([
+          0, 39.18, 74.98, 98.46, 124.18, 151.48, 182.16, 264.32, 314.22,
+          348.36, 388.24, 438.28, 485.78, 514.14, 584.54, 654.54, 683.08, 729.56
+        ], [
+          { kicker: "UNIDAD 5 · UML", title: "El modelo organiza lo que el sistema permite", lead: "Las cajas nombran tipos; sus divisiones hacen visible el estado y las operaciones.", diagram: "visibility", codeTitle: "Notación UML", code: ["Persona", "- nombre: String", "- edad: int", "+ getNombre(): String", "# validar(): boolean"], cards: [["Privado", "Menos: el estado queda dentro de la clase."], ["Público", "Más: la operación forma parte del contrato visible."], ["Protegido", "Numeral: acceso para subclases y contexto permitido."]] },
+          { kicker: "UNIDAD 5 · ASOCIACIÓN", title: "Conocer no implica crear", lead: "La asociación mantiene una referencia entre objetos independientes.", diagram: "directed-association", codeTitle: "Asignación de una asociación", code: ["Pasaporte pasaporte = new Pasaporte(...);", "persona.setPasaporte(pasaporte);"], cards: [["Flecha abierta", "Indica el sentido de navegación."], ["Bidireccional", "Los dos extremos conocen la relación y deben sincronizarse."], ["Corte del ciclo", "La condición que compara el vínculo impide llamadas recursivas."]] },
+          { kicker: "UNIDAD 5 · CICLO DE VIDA", title: "Rombo vacío y rombo relleno codifican autonomía", lead: "Las relaciones todo-parte se diferencian por el origen y la vida independiente del objeto parte.", diagram: "composition-aggregation", codeTitle: "Constructor que crea su parte", code: ["this.portada = new Portada(titulo);"], cards: [["Agregación · blanco", "La parte llega construida y puede sobrevivir al todo."], ["Composición · negro", "El todo crea la parte y administra su ciclo de vida."]] },
+          { kicker: "UNIDAD 5 · MULTIPLICIDAD", title: "La cantidad define la estructura de la colección", lead: "El lado singular conserva una lista cuando la relación admite muchos elementos.", diagram: "multiplicity", codeTitle: "Vínculo 1 a muchos", code: ["private final List<Empleado> empleados = new ArrayList<>();", "empleados.add(empleado);"], cards: [["1", "Un objeto del lado que administra la colección."], ["1..*", "Uno o más objetos en el extremo múltiple."], ["Bidireccional", "Sincronizar la referencia inversa y evitar duplicados."]] },
+          { kicker: "UNIDAD 5 · DEPENDENCIAS", title: "Las flechas distinguen el uso y la creación", lead: "La dependencia vive en una operación y no como una referencia persistente.", diagram: "dependency", codeTitle: "Impresora usa Documento", code: ["void imprimir(Documento documento) {", "    dispositivo.enviar(documento);", "}"], cards: [["«use»", "El objeto llega como parámetro y se usa temporalmente."], ["«create»", "La operación crea una instancia concreta y conoce su constructor."]] },
+          { kicker: "UNIDAD 5 · DISEÑO", title: "El conocimiento de una clase tiene un costo", lead: "La cohesión concentra responsabilidades; el bajo acoplamiento limita el alcance de los cambios.", codeTitle: "Tell, Don't Ask", code: ["if (tarjeta.tieneSaldoDisponible(total)) {", "    tarjeta.descontar(total);", "}"], cards: [["Cohesión", "Cada clase reúne operaciones ligadas a una responsabilidad."], ["Acoplamiento", "Una clase conoce menos dependencias concretas."], ["Encapsular", "El objeto decide cómo mantener coherente su propio estado."]] },
+          { kicker: "UNIDAD 5 · POSNET", title: "Las validaciones gobiernan el cambio de estado", lead: "Las reglas de pago determinan si la operación llega a descontar y producir un ticket.", codeTitle: "10.000 pesos en cinco cuotas", code: ["cuotasAdicionales = 5 - 1 = 4", "recargo = 4 * 3% = 12%", "total = 10.000 * 1,12 = 11.200", "cuota = 11.200 / 5 = 2.240"], cards: [["Primero", "Verificar que las cuotas estén entre uno y seis."], ["Después", "Comprobar el saldo sobre el monto total."], ["Solo entonces", "Descontar y crear un Ticket inmutable."]] },
+          { kicker: "UNIDAD 6 · COLECCIONES", title: "La colección existe solo cuando se crea", lead: "ArrayList crece; la declaración de su referencia no reserva una lista utilizable.", codeTitle: "ArrayList y sus métodos", code: ["List<Producto> productos = new ArrayList<>();", "productos.add(producto);", "productos.size();", "productos.get(0);"], cards: [["Array", "La cantidad de posiciones es fija."], ["ArrayList", "add, get, remove, size, contains, isEmpty."], ["NullPointerException", "Sin new, la referencia no apunta a una colección."]] },
+          { kicker: "UNIDAD 6 · RELACIONES", title: "Una lista materializa la multiplicidad uno a muchos", lead: "La colección pertenece al lado que administra los muchos; los vínculos inversos requieren sincronización.", codeTitle: "Departamento.java", code: ["if (e != null && !empleados.contains(e)) {", "    empleados.add(e);", "    e.setDepartamento(this);", "}"], cards: [["Fábrica", "Administra sucursales."], ["Sucursal", "Administra instrumentos y recibe las operaciones delegadas."], ["Integridad", "Evitar null, duplicados y referencias inversas desactualizadas."]] },
+          { kicker: "UNIDAD 6 · BÚSQUEDAS", title: "El criterio de búsqueda debe coincidir con el dato", lead: "La búsqueda lineal compara cada elemento hasta hallar una coincidencia o agotar la lista.", codeTitle: "Identificadores String", code: ["if (instrumento.getId().equals(id)) {", "    return instrumento;", "}", "return null;"], cards: [["equals", "Compara el contenido de String."], ["==", "Compara identidad de referencia."], ["null", "Representa que no hubo coincidencia y debe verificarse."]] },
+          { kicker: "UNIDAD 6 · ENUM Y RECORRIDO", title: "Valores cerrados y operaciones sobre listas", lead: "El tipo enum restringe opciones; el mecanismo de recorrido depende de la operación necesaria.", codeTitle: "Enum y remove", code: ["enum Color { ROJO, VERDE, AZUL }", "Color.VERDE.ordinal(); // 1", "productos.remove(1); // por índice", "productos.remove(producto); // por igualdad"], cards: [["Enum", "values, valueOf, name y ordinal empiezan en cero."], ["For-each", "Adecuado para leer, acumular e imprimir."], ["Índice", "El for indexado sirve cuando se necesita posición o modificación."]] },
+          { kicker: "UNIDAD 7 · HERENCIA", title: "Una jerarquía describe una relación es-un", lead: "La superclase aporta un marco compartido; el constructor hijo establece primero esa parte.", diagram: "inheritance", codeTitle: "super(nombre)", code: ["class Perro extends Animal {", "    Perro(String nombre, String raza) {", "        super(nombre);", "        this.raza = raza;", "    }", "}"], cards: [["Una superclase", "Java utiliza herencia simple de clases."], ["Constructor", "No se hereda; super(...) debe ejecutarse primero."], ["Mala jerarquía", "Motor no es un Auto; esa relación es asociación."]] },
+          { kicker: "UNIDAD 7 · ABSTRACCIÓN", title: "El tipo común puede dejar operaciones pendientes", lead: "La clase abstracta organiza lo común sin afirmar que exista una instancia genérica completa.", codeTitle: "Figura y cálculo de área", code: ["abstract class Figura {", "    abstract double area();", "    String info() { return nombre; }", "}"], cards: [["Sin instancia directa", "No se puede ejecutar new Figura()."], ["Método abstracto", "La subclase concreta debe implementar el comportamiento."], ["final", "Restringe herencia o sobrescritura."]] },
+          { kicker: "UNIDAD 7 · DESPACHO", title: "El objeto real determina el comportamiento", lead: "El tipo estático y el tipo real responden preguntas diferentes sobre la llamada.", codeTitle: "Upcasting y downcasting", code: ["Animal a = new Perro();", "a.hacerSonido();", "if (a instanceof Perro) {", "    ((Perro) a).ladrar();", "}"], cards: [["Compilación", "La referencia determina las operaciones accesibles."], ["Ejecución", "El objeto real selecciona la implementación sobrescrita."], ["Conversión", "Upcasting es seguro; downcasting exige verificación."]] },
+          { kicker: "UNIDAD 8 · INTERFACES", title: "Los contratos combinan capacidades", lead: "Una clase implementa varias capacidades sin extender varias clases base.", diagram: "realization", codeTitle: "Resolución de métodos default", code: ["class Mia implements A, B {", "    @Override", "    public void saludar() {", "        A.super.saludar();", "    }", "}"], cards: [["Interfaz", "Define qué operación promete un tipo."], ["Clase abstracta", "Puede compartir estado y comportamiento."], ["Diamante", "Un conflicto default se resuelve explícitamente en la clase."]] },
+          { kicker: "UNIDAD 8 · EXCEPCIONES", title: "La jerarquía condiciona el contrato de manejo", lead: "Las checked participan en compilación; las unchecked no exigen declaración.", diagram: "exception-hierarchy", codeTitle: "try, catch y finally", code: ["try {", "    leerArchivo();", "} catch (IOException ex) {", "    informar(ex);", "} finally {", "    liberar();", "}"], cards: [["Checked", "IOException exige catch o throws."], ["Unchecked", "RuntimeException y sus subclases no exigen declaración."]] },
+          { kicker: "UNIDAD 8 · THROW Y THROWS", title: "Lanzar y declarar son responsabilidades distintas", lead: "El método detecta la condición; el llamador maneja o propaga el error.", codeTitle: "Declaración y lanzamiento", code: ["void leer() throws IOException {", "    throw new IOException(\"No se pudo leer\");", "}"], cards: [["throw", "Lanza una instancia en el cuerpo del método."], ["throws", "Declara la posibilidad en la firma."], ["Catch", "El subtipo aparece antes que su padre."]] },
+          { kicker: "UNIDAD 8 · RECURSOS Y RANGO", title: "El flujo y el tipo delimitan el resultado", lead: "El cierre de un recurso y la capacidad numérica forman parte de la corrección.", codeTitle: "Try-with-resources", code: ["try (BufferedReader br = abrir(ruta)) {", "    procesar(br);", "}", "// el recurso se cierra al salir"], cards: [["finally", "Libera recursos al abandonar el flujo."], ["AutoCloseable", "Permite cierre automático en try-with-resources."], ["int", "12! cabe; 13! desborda el rango."]] }
+        ], 786.98)
+      }
+    });
+
+    const audio = document.getElementById("presentation-track");
+    const slidesRoot = document.getElementById("slides");
+    const progressFill = document.getElementById("progress-fill");
+    const progressSeek = document.getElementById("progress-seek");
+    const startButton = document.getElementById("start-button");
+    const playButton = document.getElementById("play-button");
+    const slideNumber = document.getElementById("slide-number");
+    const tabs = [...document.querySelectorAll(".deck-tab")];
+    let activeDeck = "practica";
+    let activeSlide = 0;
+    let frame = 0;
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      })[character]);
+    }
+
+    function codeBlock(lines, title) {
+      if (!lines) return "";
+      return `<div class="code-panel"><div class="file-tab">${title || "Ejemplo Java"}</div><pre>${lines.map((line, index) =>
+        `<code class="code-line" data-line="${index + 1}"><span class="line-number">${index + 1}</span>${escapeHtml(line)}</code>`
+      ).join("")}</pre></div>`;
+    }
+
+    function umlDiagramMarkup(type) {
+      const diagrams = {
+        composition: {
+          label: "Composición UML: Pasaporte tiene un rombo negro en el extremo de la relación con Foto",
+          caption: "Rombo relleno junto al todo = composición",
+          svg: `<rect class="uml-box" x="18" y="38" width="150" height="50" rx="5"/><text x="93" y="68" text-anchor="middle">Pasaporte</text><polygon points="168,63 183,48 198,63 183,78" fill="#55576c" stroke="#55576c" stroke-width="2"/><path class="uml-line" d="M198 63H390"/><rect class="uml-box" x="390" y="38" width="150" height="50" rx="5"/><text x="465" y="68" text-anchor="middle">Foto</text>`
+        },
+        "composition-aggregation": {
+          label: "Comparación UML: Auto contiene Motor mediante rombo blanco, y Libro contiene Portada mediante rombo negro",
+          caption: "Rombo vacío: agregación · rombo relleno: composición",
+          svg: `<rect class="uml-box" x="8" y="12" width="112" height="38" rx="5"/><text x="64" y="36" text-anchor="middle">Auto</text><polygon points="120,31 132,19 144,31 132,43" fill="#fff" stroke="#55576c" stroke-width="2"/><path class="uml-line" d="M144 31H358"/><rect class="uml-box" x="358" y="12" width="112" height="38" rx="5"/><text x="414" y="36" text-anchor="middle">Motor</text><rect class="uml-box" x="8" y="70" width="112" height="38" rx="5"/><text x="64" y="94" text-anchor="middle">Libro</text><polygon points="120,89 132,77 144,89 132,101" fill="#55576c" stroke="#55576c" stroke-width="2"/><path class="uml-line" d="M144 89H358"/><rect class="uml-box" x="358" y="70" width="112" height="38" rx="5"/><text x="414" y="94" text-anchor="middle">Portada</text>`
+        },
+        multiplicity: {
+          label: "Asociación UML uno a muchos entre Departamento y Empleado, con multiplicidad uno y uno o más",
+          caption: "1 ····· 1..* = un departamento se relaciona con uno o más empleados",
+          svg: `<rect class="uml-box" x="16" y="36" width="170" height="52" rx="5"/><text x="101" y="67" text-anchor="middle">Departamento</text><text class="uml-small" x="197" y="57">1</text><path class="uml-line" d="M186 62H384"/><text class="uml-small" x="350" y="53">1..*</text><rect class="uml-box" x="384" y="36" width="160" height="52" rx="5"/><text x="464" y="67" text-anchor="middle">Empleado</text>`
+        },
+        "directed-association": {
+          label: "Asociación UML navegable de Alumno hacia Tutor, con flecha abierta junto a Tutor",
+          caption: "La flecha indica navegabilidad: Alumno → Tutor",
+          svg: `<rect class="uml-box" x="18" y="38" width="150" height="50" rx="5"/><text x="93" y="68" text-anchor="middle">Alumno</text><path class="uml-line" d="M168 63H385"/><path d="M385 63L365 52M385 63L365 74" fill="none" stroke="#55576c" stroke-width="2.5"/><rect class="uml-box" x="385" y="38" width="150" height="50" rx="5"/><text x="460" y="68" text-anchor="middle">Tutor</text>`
+        },
+        aggregation: {
+          label: "Agregación UML: Auto se relaciona con Motor mediante un rombo vacío junto a Auto",
+          caption: "Rombo vacío junto al todo = agregación; Motor puede existir por separado",
+          svg: `<rect class="uml-box" x="18" y="38" width="150" height="50" rx="5"/><text x="93" y="68" text-anchor="middle">Auto</text><polygon points="168,63 183,48 198,63 183,78" fill="#fff" stroke="#55576c" stroke-width="2.5"/><path class="uml-line" d="M198 63H390"/><rect class="uml-box" x="390" y="38" width="150" height="50" rx="5"/><text x="465" y="68" text-anchor="middle">Motor</text>`
+        },
+        dependency: {
+          label: "Dependencia UML: flecha discontinua desde Impresora hacia Documento con estereotipo use",
+          caption: "Flecha discontinua + «use» = dependencia temporal",
+          svg: `<rect class="uml-box" x="18" y="48" width="175" height="50" rx="5"/><text x="105" y="78" text-anchor="middle">Impresora</text><text class="uml-small" x="300" y="39" text-anchor="middle">«use»</text><path class="uml-line" d="M193 73H388" stroke-dasharray="8 6"/><path d="M388 73L368 62M388 73L368 84" fill="none" stroke="#55576c" stroke-width="2.5"/><rect class="uml-box" x="388" y="48" width="155" height="50" rx="5"/><text x="465" y="78" text-anchor="middle">Documento</text>`
+        },
+        inheritance: {
+          label: "Herencia UML: Perro y Gato apuntan con líneas continuas y triángulos abiertos hacia Animal",
+          caption: "Línea continua + triángulo vacío hacia la superclase = herencia",
+          svg: `<rect class="uml-box" x="190" y="8" width="180" height="38" rx="5"/><text x="280" y="32" text-anchor="middle">Animal</text><rect class="uml-box" x="28" y="78" width="160" height="36" rx="5"/><text x="108" y="101" text-anchor="middle">Perro</text><rect class="uml-box" x="372" y="78" width="160" height="36" rx="5"/><text x="452" y="101" text-anchor="middle">Gato</text><path class="uml-line" d="M108 78L220 45"/><polygon points="220,45 203,43 211,58" fill="#fff" stroke="#55576c" stroke-width="2"/><path class="uml-line" d="M452 78L340 45"/><polygon points="340,45 349,58 357,43" fill="#fff" stroke="#55576c" stroke-width="2"/>`
+        },
+        realization: {
+          label: "Realización UML: Pato implementa las interfaces Volador y Nadador mediante líneas discontinuas y triángulos abiertos",
+          caption: "Línea discontinua + triángulo vacío = realización de una interfaz",
+          svg: `<rect class="uml-box" x="24" y="8" width="180" height="38" rx="5"/><text x="114" y="32" text-anchor="middle">«interface» Volador</text><rect class="uml-box" x="356" y="8" width="180" height="38" rx="5"/><text x="446" y="32" text-anchor="middle">«interface» Nadador</text><rect class="uml-box" x="190" y="78" width="180" height="36" rx="5"/><text x="280" y="101" text-anchor="middle">Pato</text><path class="uml-line" d="M220 78L145 45" stroke-dasharray="7 5"/><polygon points="145,45 160,46 153,59" fill="#fff" stroke="#55576c" stroke-width="2"/><path class="uml-line" d="M340 78L415 45" stroke-dasharray="7 5"/><polygon points="415,45 407,59 400,46" fill="#fff" stroke="#55576c" stroke-width="2"/>`
+        },
+        "exception-hierarchy": {
+          label: "Jerarquía de excepciones: Throwable se divide en Error y Exception; Exception se divide en IOException y RuntimeException",
+          caption: "Checked: IOException · Unchecked: RuntimeException y sus subclases",
+          svg: `<rect class="uml-box" x="208" y="6" width="144" height="30" rx="7"/><text x="280" y="26" text-anchor="middle">Throwable</text><path class="uml-line" d="M240 36L140 55M320 36L420 55"/><rect class="uml-box" x="68" y="55" width="144" height="30" rx="7"/><text x="140" y="75" text-anchor="middle">Error</text><rect class="uml-box" x="348" y="55" width="144" height="30" rx="7"/><text x="420" y="75" text-anchor="middle">Exception</text><path class="uml-line" d="M390 85L330 102M450 85L470 102"/><rect class="uml-box" x="230" y="101" width="144" height="28" rx="7"/><text x="302" y="120" text-anchor="middle">IOException</text><rect class="uml-box" x="395" y="101" width="150" height="28" rx="7"/><text x="470" y="120" text-anchor="middle">RuntimeException</text>`
+        },
+        visibility: {
+          label: "Notación de atributos UML: menos nombre String indica privado, más indica público, numeral protegido y tilde de paquete",
+          caption: "− private · + public · # protected · ~ package",
+          svg: `<rect class="uml-box" x="105" y="12" width="350" height="94" rx="5"/><path class="uml-line" d="M105 43H455" stroke-width="1.5"/><text x="280" y="34" text-anchor="middle">Alumno</text><text x="125" y="67">− nombre: String</text><text class="uml-small" x="125" y="91">+ getNombre(): String</text>`
+        }
+      };
+      const diagram = diagrams[type];
+      if (!diagram) throw new Error(`Diagrama UML desconocido: ${type}`);
+      return `<figure class="uml-panel"><svg viewBox="0 0 560 120" role="img" aria-label="${diagram.label}">${diagram.svg}</svg><figcaption class="uml-caption">${diagram.caption}</figcaption></figure>`;
+    }
+
+    function explanationMarkup(slide) {
+      const cards = slide.cards ? `<div class="cards">${slide.cards.map(([title, text], index) =>
+        `<div class="card" data-card="${index}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(text)}</span></div>`
+      ).join("")}</div>` : "";
+      const text = slide.text ? `<div class="info-box" data-box>${escapeHtml(slide.text)}</div>` : "";
+      const diagram = slide.diagram ? umlDiagramMarkup(slide.diagram) : "";
+      const prompt = slide.prompt ? `<div class="question-box" data-question><strong data-prompt>${escapeHtml(slide.prompt)}</strong><span data-answer>${escapeHtml(slide.answer || "")}</span></div>` : "";
+      const exercise = slide.exercise ? `<div class="question-box" data-box><strong>Probá resolverlo</strong>${escapeHtml(slide.exercise)}</div>` : "";
+      const solution = slide.solution ? `<details class="solution"><summary>Ver resolución</summary><div class="solution-body">${escapeHtml(slide.solution)}${slide.solutionCode ? codeBlock(slide.solutionCode, "Corrección") : ""}</div></details>` : "";
+      const output = slide.output ? `<div class="output">${escapeHtml(slide.output)}</div>` : "";
+      return `<div class="explanation">${cards}${text}${diagram}${prompt}${exercise}${solution}${output}</div>`;
+    }
+
+    function slideMarkup(slide, index) {
+      const title = index === 0 && activeDeck === "practica" ? `<h1>${escapeHtml(slide.title)}</h1>` : `<h2>${escapeHtml(slide.title)}</h2>`;
+      const lead = slide.lead ? `<p class="lead">${escapeHtml(slide.lead)}</p>` : "";
+      let body;
+      if (slide.code) {
+        body = `<div class="lesson-layout">${codeBlock(slide.code, slide.codeTitle)}${explanationMarkup(slide)}</div>`;
+      } else {
+        const list = slide.list ? `<ul class="plain-list">${slide.list.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "";
+        const panel = !slide.cards && slide.text ? `<div class="info-box" data-box>${escapeHtml(slide.text)}</div>` : "";
+        body = `<div class="slide-main text-slide">${slide.cards || slide.prompt || slide.diagram ? explanationMarkup(slide) : ""}${panel}${list}</div>`;
+      }
+      return `<article class="slide${index === 0 ? " active" : ""}" data-slide="${index}">
+        <p class="eyebrow">${escapeHtml(slide.kicker)}</p>${title}${lead}${body}
+      </article>`;
+    }
+
+    function updateSlideNumber() {
+      slideNumber.textContent = `${activeSlide + 1} / ${decks[activeDeck].slides.length}`;
+    }
+
+    function showSlide(index) {
+      const slides = decks[activeDeck].slides;
+      activeSlide = Math.max(0, Math.min(index, slides.length - 1));
+      slidesRoot.querySelectorAll(".slide").forEach((slide, slideIndex) => {
+        slide.classList.toggle("active", slideIndex === activeSlide);
+      });
+      updateSlideNumber();
+      updateHighlights(audio.currentTime);
+    }
+
+    function updateHighlights(time) {
+      const slide = decks[activeDeck].slides[activeSlide];
+      if (!slide) return;
+      slidesRoot.querySelectorAll(".mentioned, .prompt-active, .answer-active").forEach(element => {
+        element.classList.remove("mentioned", "prompt-active", "answer-active");
+      });
+      const question = slidesRoot.querySelector(`[data-slide="${activeSlide}"] [data-question]`);
+      if (question) {
+        if (time < slide.answerAt) {
+          question.classList.add("mentioned", "prompt-active");
+        } else {
+          question.classList.add("mentioned", "answer-active");
+        }
+      }
+      for (const cue of slide.cues || []) {
+        if (time < cue.from || time >= cue.to) continue;
+        for (const line of cue.lines || []) {
+          const target = slidesRoot.querySelector(`[data-slide="${activeSlide}"] [data-line="${line}"]`);
+          if (target) target.classList.add("mentioned");
+        }
+        if (cue.card !== undefined) {
+          const target = slidesRoot.querySelector(`[data-slide="${activeSlide}"] [data-card="${cue.card}"]`);
+          if (target) target.classList.add("mentioned");
+        }
+        if (cue.box) {
+          const target = slidesRoot.querySelector(`[data-slide="${activeSlide}"] [data-box]`);
+          if (target) target.classList.add("mentioned");
+        }
+      }
+    }
+
+    function syncPresentation() {
+      const duration = audio.duration;
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      const time = audio.currentTime;
+      progressFill.style.width = `${time / duration * 100}%`;
+      progressSeek.value = String(Math.round(time / duration * 1000));
+      const slides = decks[activeDeck].slides;
+      let target = 0;
+      for (let index = 0; index < slides.length; index++) {
+        if (time >= slides[index].at) target = index;
+      }
+      if (target !== activeSlide) showSlide(target);
+      updateHighlights(time);
+    }
+
+    function frameLoop() {
+      syncPresentation();
+      frame = audio.paused || audio.ended ? 0 : requestAnimationFrame(frameLoop);
+    }
+
+    function startPlayback() {
+      audio.play().then(() => {
+        startButton.classList.add("hidden");
+        playButton.textContent = "Ⅱ";
+      }).catch(() => {
+        startButton.classList.remove("hidden");
+        playButton.textContent = "▶";
+      });
+    }
+
+    function renderDeck(name) {
+      activeDeck = name;
+      audio.pause();
+      audio.src = decks[name].audio;
+      audio.load();
+      activeSlide = 0;
+      slidesRoot.innerHTML = decks[name].slides.map(slideMarkup).join("");
+      tabs.forEach(tab => {
+        const selected = tab.dataset.deck === name;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-pressed", String(selected));
+      });
+      progressFill.style.width = "0%";
+      progressSeek.value = "0";
+      startButton.classList.remove("hidden");
+      playButton.textContent = "▶";
+      updateSlideNumber();
+    }
+
+    tabs.forEach(tab => tab.addEventListener("click", () => renderDeck(tab.dataset.deck)));
+    startButton.addEventListener("click", startPlayback);
+    playButton.addEventListener("click", () => audio.paused ? startPlayback() : audio.pause());
+    document.getElementById("stop-button").addEventListener("click", () => {
+      audio.pause();
+      audio.currentTime = 0;
+      showSlide(0);
+      progressFill.style.width = "0%";
+      progressSeek.value = "0";
+      startButton.classList.remove("hidden");
+    });
+    document.getElementById("back-button").addEventListener("click", () => {
+      audio.currentTime = Math.max(0, audio.currentTime - 10);
+      syncPresentation();
+    });
+    audio.addEventListener("loadedmetadata", syncPresentation);
+    audio.addEventListener("timeupdate", syncPresentation);
+    audio.addEventListener("seeking", syncPresentation);
+    audio.addEventListener("play", () => {
+      playButton.textContent = "Ⅱ";
+      if (!frame) frame = requestAnimationFrame(frameLoop);
+    });
+    audio.addEventListener("pause", () => {
+      playButton.textContent = "▶";
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      syncPresentation();
+    });
+    audio.addEventListener("ended", () => {
+      showSlide(decks[activeDeck].slides.length - 1);
+      progressFill.style.width = "100%";
+      progressSeek.value = "1000";
+      startButton.classList.remove("hidden");
+    });
+    progressSeek.addEventListener("input", () => {
+      if (Number.isFinite(audio.duration)) {
+        audio.currentTime = Number(progressSeek.value) / 1000 * audio.duration;
+        syncPresentation();
+      }
+    });
+    document.addEventListener("keydown", event => {
+      if (event.target instanceof HTMLElement && (event.target.isContentEditable || ["INPUT", "BUTTON", "SUMMARY"].includes(event.target.tagName))) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        audio.paused ? startPlayback() : audio.pause();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + 10);
+        syncPresentation();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        audio.currentTime = Math.max(0, audio.currentTime - 10);
+        syncPresentation();
+      }
+    });
+
+    renderDeck("practica");
+  </script>
+</body>
+</html>
